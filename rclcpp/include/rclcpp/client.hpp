@@ -16,6 +16,7 @@
 #define RCLCPP__CLIENT_HPP_
 
 #include <atomic>
+#include <functional>
 #include <future>
 #include <map>
 #include <memory>
@@ -49,6 +50,11 @@ namespace node_interfaces
 {
 class NodeBaseInterface;
 }  // namespace node_interfaces
+
+namespace executors
+{
+class EventsExecutor;
+}  // namespace executors
 
 class ClientBase
 {
@@ -149,6 +155,12 @@ public:
   RCLCPP_PUBLIC
   bool
   exchange_in_use_by_wait_set_state(bool in_use_state);
+
+  RCLCPP_PUBLIC
+  void
+  set_listener_callback(
+    rmw_listener_callback_t callback,
+    const void * user_data) const;
 
 protected:
   RCLCPP_DISABLE_COPY(ClientBase)

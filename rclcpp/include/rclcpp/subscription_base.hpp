@@ -16,6 +16,7 @@
 #define RCLCPP__SUBSCRIPTION_BASE_HPP_
 
 #include <atomic>
+#include <functional>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -44,6 +45,11 @@ namespace node_interfaces
 {
 class NodeBaseInterface;
 }  // namespace node_interfaces
+
+namespace executors
+{
+class EventsExecutor;
+}  // namespace executors
 
 namespace experimental
 {
@@ -262,6 +268,12 @@ public:
   RCLCPP_PUBLIC
   bool
   exchange_in_use_by_wait_set_state(void * pointer_to_subscription_part, bool in_use_state);
+
+  RCLCPP_PUBLIC
+  void
+  set_listener_callback(
+    rmw_listener_callback_t callback,
+    const void * user_data) const;
 
 protected:
   template<typename EventCallbackT>

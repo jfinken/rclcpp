@@ -32,6 +32,11 @@
 namespace rclcpp
 {
 
+namespace executors
+{
+class EventsExecutor;
+}  // namespace executors
+
 using QOSDeadlineRequestedInfo = rmw_requested_deadline_missed_status_t;
 using QOSDeadlineOfferedInfo = rmw_offered_deadline_missed_status_t;
 using QOSLivelinessChangedInfo = rmw_liveliness_changed_status_t;
@@ -101,6 +106,12 @@ public:
   RCLCPP_PUBLIC
   bool
   is_ready(rcl_wait_set_t * wait_set) override;
+
+  RCLCPP_PUBLIC
+  void
+  set_listener_callback(
+    rmw_listener_callback_t callback,
+    const void * user_data) const override;
 
 protected:
   rcl_event_t event_handle_;
