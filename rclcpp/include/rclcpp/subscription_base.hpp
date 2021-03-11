@@ -263,6 +263,12 @@ public:
   bool
   exchange_in_use_by_wait_set_state(void * pointer_to_subscription_part, bool in_use_state);
 
+  RCLCPP_PUBLIC
+  void
+  set_listener_callback(
+    rmw_listener_callback_t callback,
+    const void * user_data) const;
+
 protected:
   template<typename EventCallbackT>
   void
