@@ -62,6 +62,10 @@ public:
     rclcpp::memory_strategy::MemoryStrategy::SharedPtr & memory_strategy,
     rcl_guard_condition_t * executor_guard_condition);
 
+  RCLCPP_PUBLIC
+  bool
+  is_init() {return initialized_;}
+
   /// Finalize StaticExecutorEntitiesCollector to clear resources
   RCLCPP_PUBLIC
   void
@@ -222,6 +226,10 @@ public:
   get_waitable(size_t i) {return exec_list_.waitable[i];}
 
 private:
+
+  /// Bool to check if the entities collector has been initialized
+  bool initialized_ = false;
+
   /// Nodes guard conditions which trigger this waitable
   std::list<const rcl_guard_condition_t *> guard_conditions_;
 

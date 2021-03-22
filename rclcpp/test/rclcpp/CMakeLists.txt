@@ -524,20 +524,6 @@ if(TARGET test_interface_traits)
   target_link_libraries(test_interface_traits ${PROJECT_NAME})
 endif()
 
-# TODO(brawner) remove when destroying Node for Connext is resolved. See:
-# https://github.com/ros2/rclcpp/issues/1250
-ament_add_gtest(
-  test_executors
-  executors/test_executors.cpp
-  APPEND_LIBRARY_DIRS "${append_library_dirs}"
-  TIMEOUT 180)
-if(TARGET test_executors)
-  ament_target_dependencies(test_executors
-    "rcl"
-    "test_msgs")
-  target_link_libraries(test_executors ${PROJECT_NAME})
-endif()
-
 ament_add_gtest(test_static_single_threaded_executor executors/test_static_single_threaded_executor.cpp
   APPEND_LIBRARY_DIRS "${append_library_dirs}")
 if(TARGET test_static_single_threaded_executor)
