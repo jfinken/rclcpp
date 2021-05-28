@@ -76,6 +76,7 @@ EventsExecutorEntitiesCollector::~EventsExecutorEntitiesCollector()
   weak_nodes_.clear();
   weak_clients_map_.clear();
   weak_services_map_.clear();
+  callback_data_map_.clear();
   weak_waitables_map_.clear();
   weak_subscriptions_map_.clear();
   weak_nodes_to_guard_conditions_.clear();
@@ -140,10 +141,10 @@ EventsExecutorEntitiesCollector::add_callback_group(
   if (is_new_node) {
     // Set an event callback for the node's notify guard condition, so if new entities are added
     // or removed to this node we will receive an event.
-    set_guard_condition_callback(node_ptr->get_notify_rclcpp_guard_condition());
+    set_guard_condition_callback(node_ptr->get_notify_guard_condition());
 
     // Store node's notify guard condition
-    weak_nodes_to_guard_conditions_[node_ptr] = node_ptr->get_notify_rclcpp_guard_condition();
+    weak_nodes_to_guard_conditions_[node_ptr] = node_ptr->get_notify_guard_condition();
   }
 
   // Add callback group to weak_groups_to_node
@@ -366,7 +367,7 @@ EventsExecutorEntitiesCollector::remove_callback_group_from_map(
     // Node doesn't have more callback groups associated to the executor.
     // Unset the event callback for the node's notify guard condition, to stop
     // receiving events if entities are added or removed to this node.
-    unset_guard_condition_callback(node_ptr->get_notify_rclcpp_guard_condition());
+    unset_guard_condition_callback(node_ptr->get_notify_guard_condition());
 
     // Remove guard condition from list
     rclcpp::node_interfaces::NodeBaseInterface::WeakPtr weak_node_ptr(node_ptr);
@@ -476,30 +477,30 @@ EventsExecutorEntitiesCollector::get_automatically_added_callback_groups_from_no
 
 void
 EventsExecutorEntitiesCollector::set_guard_condition_callback(
-  rclcpp::GuardCondition * guard_condition)
+  const rcl_guard_condition_t * guard_condition)
 {
-  auto gc_callback = [this](size_t num_events) {
-    // Override num events (we don't care more than a single event)
-    num_events = 1;
-    int gc_id = -1;
-    ExecutorEvent event = {this, gc_id, WAITABLE_EVENT, num_events};
-    // Event queue mutex scope
-    {
-      std::unique_lock<std::mutex> lock(associated_executor_->push_mutex_);
-      associated_executor_->events_queue_->push(event);
-    }
-    // Notify that the event queue has some events in it.
-    associated_executor_->events_queue_cv_.notify_one();
-  };
+  rcl_ret_t ret = rcl_guard_condition_set_listener_callback(
+    guard_condition,
+    &EventsExecutor::push_event,
+    get_callback_data(this, WAITABLE_EVENT));
 
-  guard_condition->set_on_trigger_callback(gc_callback);
+  if (ret != RCL_RET_OK) {
+    throw std::runtime_error("Couldn't set guard condition event callback");
+  }
 }
 
 void
 EventsExecutorEntitiesCollector::unset_guard_condition_callback(
-  rclcpp::GuardCondition * guard_condition)
+  const rcl_guard_condition_t * guard_condition)
 {
-   guard_condition->set_on_trigger_callback(nullptr);
+  rcl_ret_t ret = rcl_guard_condition_set_listener_callback(
+    guard_condition, nullptr, nullptr);
+
+  if (ret != RCL_RET_OK) {
+    throw std::runtime_error("Couldn't unset guard condition event callback");
+  }
+
+  remove_callback_data(this, WAITABLE_EVENT);
 }
 
 rclcpp::SubscriptionBase::SharedPtr
