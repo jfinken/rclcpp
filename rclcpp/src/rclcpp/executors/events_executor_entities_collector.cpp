@@ -76,7 +76,6 @@ EventsExecutorEntitiesCollector::~EventsExecutorEntitiesCollector()
   weak_nodes_.clear();
   weak_clients_map_.clear();
   weak_services_map_.clear();
-  callback_data_map_.clear();
   weak_waitables_map_.clear();
   weak_subscriptions_map_.clear();
   weak_nodes_to_guard_conditions_.clear();

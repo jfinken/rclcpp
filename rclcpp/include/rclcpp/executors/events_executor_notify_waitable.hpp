@@ -53,7 +53,7 @@ public:
 
   RCLCPP_PUBLIC
   void
-  add_guard_condition(const rclcpp::GuardCondition * guard_condition)
+  add_guard_condition(const rcl_guard_condition_t * guard_condition)
   {
     notify_guard_conditions_.push_back(guard_condition);
   }
@@ -77,7 +77,7 @@ public:
   }
 
 private:
-  std::list<const rclcpp::GuardCondition *> notify_guard_conditions_;
+  std::list<const rcl_guard_condition_t *> notify_guard_conditions_;
 };
 
 }  // namespace executors

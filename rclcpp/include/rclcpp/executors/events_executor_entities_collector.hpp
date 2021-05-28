@@ -209,10 +209,10 @@ private:
   unset_callback_group_entities_callbacks(rclcpp::CallbackGroup::SharedPtr group);
 
   void
-  set_guard_condition_callback(rclcpp::GuardCondition * guard_condition);
+  set_guard_condition_callback(const rcl_guard_condition_t * guard_condition);
 
   void
-  unset_guard_condition_callback(rclcpp::GuardCondition * guard_condition);
+  unset_guard_condition_callback(const rcl_guard_condition_t * guard_condition);
 
   std::function<void(size_t)>
   create_entity_callback(void * exec_entity_id, ExecutorEventType type);
@@ -249,7 +249,7 @@ private:
   WeakCallbackGroupsToNodesMap weak_groups_to_nodes_associated_with_executor_;
 
   typedef std::map<rclcpp::node_interfaces::NodeBaseInterface::WeakPtr,
-      rclcpp::GuardCondition *,
+      rcl_guard_condition_t *,
       std::owner_less<rclcpp::node_interfaces::NodeBaseInterface::WeakPtr>>
     WeakNodesToGuardConditionsMap;
   WeakNodesToGuardConditionsMap weak_nodes_to_guard_conditions_;
