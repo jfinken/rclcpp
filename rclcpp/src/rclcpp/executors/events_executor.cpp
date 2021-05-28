@@ -95,18 +95,18 @@ EventsExecutor::spin_some(std::chrono::nanoseconds max_duration)
     max_duration = next_timer_timeout;
   }
 
-  std::unique_lock<std::mutex> push_lock(push_mutex_);
+  //std::unique_lock<std::mutex> push_lock(push_mutex_);
   // Wait until timeout or event
   // event_queue_cv_.wait_for(push_lock, max_duration, has_event_predicate);
   // Time to swap queues as the wait is over
-  std::swap(execution_event_queue, event_queue_);
+  //std::swap(execution_event_queue, event_queue_);
   // After swapping the queues, we don't need the lock anymore
-  push_lock.unlock();
+  //push_lock.unlock();
 
   // Execute all ready timers
   timers_manager_->execute_ready_timers();
   // Consume all available events, this queue will be empty at the end of the function
-  this->consume_all_events(execution_event_queue);
+  this->consume_all_events(event_queue_);
 }
 
 void
