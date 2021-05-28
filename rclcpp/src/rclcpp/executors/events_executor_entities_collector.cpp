@@ -143,7 +143,7 @@ EventsExecutorEntitiesCollector::add_callback_group(
     set_guard_condition_callback(node_ptr->get_notify_guard_condition());
 
     // Store node's notify guard condition
-    weak_nodes_to_guard_conditions_[node_ptr] = node_ptr->get_notify_guard_condition();
+    weak_nodes_to_guard_conditions_[node_ptr] = &(node_ptr->get_notify_guard_condition());
   }
 
   // Add callback group to weak_groups_to_node
@@ -476,7 +476,7 @@ EventsExecutorEntitiesCollector::get_automatically_added_callback_groups_from_no
 
 void
 EventsExecutorEntitiesCollector::set_guard_condition_callback(
-  rclcpp::GuardCondition * guard_condition)
+  rclcpp::GuardCondition & guard_condition)
 {
   auto gc_callback = [this](size_t num_events) {
     // Override num events (we don't care more than a single event)
@@ -492,7 +492,7 @@ EventsExecutorEntitiesCollector::set_guard_condition_callback(
     associated_executor_->events_queue_cv_.notify_one();
   };
 
-  guard_condition->set_on_trigger_callback(gc_callback);
+  guard_condition.set_on_trigger_callback(gc_callback);
 }
 
 void

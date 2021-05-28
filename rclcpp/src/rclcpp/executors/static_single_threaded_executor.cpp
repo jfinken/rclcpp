@@ -149,9 +149,7 @@ StaticSingleThreadedExecutor::add_node(
   bool is_new_node = entities_collector_->add_node(node_ptr);
   if (is_new_node && notify) {
     // Interrupt waiting to handle new node
-    if (rcl_trigger_guard_condition(&interrupt_guard_condition_) != RCL_RET_OK) {
-      throw std::runtime_error(rcl_get_error_string().str);
-    }
+    interrupt_guard_condition_.trigger();
   }
 }
 
