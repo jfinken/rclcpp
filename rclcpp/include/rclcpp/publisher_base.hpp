@@ -29,6 +29,7 @@
 
 #include "rcl/publisher.h"
 
+#include "rclcpp/detail/enum_hash.hpp"
 #include "rclcpp/macros.hpp"
 #include "rclcpp/network_flow_endpoint.hpp"
 #include "rclcpp/qos.hpp"
@@ -297,7 +298,7 @@ protected:
   std::shared_ptr<rcl_publisher_t> publisher_handle_;
 
   std::unordered_map<rcl_publisher_event_type_t,
-    std::shared_ptr<rclcpp::QOSEventHandlerBase>> event_handlers_;
+    std::shared_ptr<rclcpp::QOSEventHandlerBase>, detail::EnumClassHash> event_handlers_;
 
   using IntraProcessManagerWeakPtr =
     std::weak_ptr<rclcpp::experimental::IntraProcessManager>;

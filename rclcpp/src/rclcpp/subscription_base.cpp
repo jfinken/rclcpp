@@ -118,7 +118,7 @@ SubscriptionBase::get_subscription_handle() const
 }
 
 const
-std::unordered_map<rcl_subscription_event_type_t, std::shared_ptr<rclcpp::QOSEventHandlerBase>> &
+std::unordered_map<rcl_subscription_event_type_t, std::shared_ptr<rclcpp::QOSEventHandlerBase>, rclcpp::detail::EnumClassHash> &
 SubscriptionBase::get_event_handlers() const
 {
   return event_handlers_;

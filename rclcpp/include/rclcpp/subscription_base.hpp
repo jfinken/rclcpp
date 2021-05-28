@@ -30,6 +30,7 @@
 
 #include "rclcpp/any_subscription_callback.hpp"
 #include "rclcpp/detail/cpp_callback_trampoline.hpp"
+#include "rclcpp/detail/enum_hash.hpp"
 #include "rclcpp/experimental/intra_process_manager.hpp"
 #include "rclcpp/experimental/subscription_intra_process_base.hpp"
 #include "rclcpp/macros.hpp"
@@ -105,7 +106,7 @@ public:
   /** \return The vector of QoS event handlers. */
   RCLCPP_PUBLIC
   const
-  std::unordered_map<rcl_subscription_event_type_t, std::shared_ptr<rclcpp::QOSEventHandlerBase>> &
+  std::unordered_map<rcl_subscription_event_type_t, std::shared_ptr<rclcpp::QOSEventHandlerBase>, detail::EnumClassHash> &
   get_event_handlers() const;
 
   /// Get the actual QoS settings, after the defaults have been determined.
@@ -522,7 +523,7 @@ protected:
   rclcpp::Logger node_logger_;
 
   std::unordered_map<rcl_subscription_event_type_t,
-    std::shared_ptr<rclcpp::QOSEventHandlerBase>> event_handlers_;
+    std::shared_ptr<rclcpp::QOSEventHandlerBase>, detail::EnumClassHash> event_handlers_;
 
   bool use_intra_process_;
   IntraProcessManagerWeakPtr weak_ipm_;
