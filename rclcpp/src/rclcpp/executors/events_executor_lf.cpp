@@ -19,31 +19,31 @@
 #include <vector>
 
 #include "rclcpp/exceptions/exceptions.hpp"
-#include "rclcpp/executors/events_executor.hpp"
+#include "rclcpp/executors/events_executor_lf.hpp"
 
 using namespace std::chrono_literals;
 
-using rclcpp::executors::EventsExecutor;
+using rclcpp::executors::EventsExecutorLF;
 
-EventsExecutor::EventsExecutor(
+EventsExecutorLF::EventsExecutorLF(
   const rclcpp::ExecutorOptions & options)
 : rclcpp::Executor(options)
 {
   timers_manager_ = std::make_shared<TimersManager>(context_);
-  entities_collector_ = std::make_shared<EventsExecutorEntitiesCollector>(this);
+  entities_collector_ = std::make_shared<EventsExecutorLFEntitiesCollector>(this);
   entities_collector_->init();
 
   // Setup the executor notifier to wake up the executor when some guard conditions are tiggered.
   // The added guard conditions are guaranteed to not go out of scope before the executor itself.
-  executor_notifier_ = std::make_shared<EventsExecutorNotifyWaitable>();
+  executor_notifier_ = std::make_shared<EventsExecutorLFNotifyWaitable>();
   executor_notifier_->add_guard_condition(&shutdown_guard_condition_->get_rcl_guard_condition());
   executor_notifier_->add_guard_condition(&interrupt_guard_condition_);
-  executor_notifier_->set_events_executor_callback(this, &EventsExecutor::push_event);
+  executor_notifier_->set_events_executor_callback(this, &EventsExecutorLF::push_event);
   entities_collector_->add_waitable(executor_notifier_);
 }
 
 void
-EventsExecutor::spin()
+EventsExecutorLF::spin()
 {
   if (spinning.exchange(true)) {
     throw std::runtime_error("spin() called while already spinning");
@@ -51,10 +51,7 @@ EventsExecutor::spin()
   RCLCPP_SCOPE_EXIT(this->spinning.store(false););
 
   // When condition variable is notified, check this predicate to proceed
-  auto has_event_predicate = [this]() {return !event_queue_.empty();};
-
-  // Local event queue to allow entities to push events while we execute them
-  EventQueue execution_event_queue;
+  auto has_event_predicate = [this]() {return event_queue_.size_approx() != 0;};
 
   timers_manager_->start();
 
@@ -62,18 +59,14 @@ EventsExecutor::spin()
     std::unique_lock<std::mutex> push_lock(push_mutex_);
     // We wait here until something has been pushed to the event queue
     event_queue_cv_.wait(push_lock, has_event_predicate);
-    // We got an event! Swap queues
-    std::swap(execution_event_queue, event_queue_);
-    // After swapping the queues, we don't need the lock anymore
     push_lock.unlock();
-    // Consume all available events, this queue will be empty at the end of the function
-    this->consume_all_events(execution_event_queue);
+    this->consume_all_events(event_queue_);
   }
   timers_manager_->stop();
 }
 
 void
-EventsExecutor::spin_some(std::chrono::nanoseconds max_duration)
+EventsExecutorLF::spin_some(std::chrono::nanoseconds max_duration)
 {
   if (spinning.exchange(true)) {
     throw std::runtime_error("spin_some() called while already spinning");
@@ -91,7 +84,7 @@ EventsExecutor::spin_some(std::chrono::nanoseconds max_duration)
   // - An executor event is received and processed
 
   // When condition variable is notified, check this predicate to proceed
-  auto has_event_predicate = [this]() {return !event_queue_.empty();};
+  auto has_event_predicate = [this]() {return event_queue_.size_approx() != 0;};
 
   // Local event queue to allow entities to push events while we execute them
   EventQueue execution_event_queue;
@@ -102,22 +95,22 @@ EventsExecutor::spin_some(std::chrono::nanoseconds max_duration)
     max_duration = next_timer_timeout;
   }
 
-  std::unique_lock<std::mutex> push_lock(push_mutex_);
+  //std::unique_lock<std::mutex> push_lock(push_mutex_);
   // Wait until timeout or event
   // event_queue_cv_.wait_for(push_lock, max_duration, has_event_predicate);
   // Time to swap queues as the wait is over
-  std::swap(execution_event_queue, event_queue_);
+  //std::swap(execution_event_queue, event_queue_);
   // After swapping the queues, we don't need the lock anymore
-  push_lock.unlock();
+  //push_lock.unlock();
 
   // Execute all ready timers
   timers_manager_->execute_ready_timers();
   // Consume all available events, this queue will be empty at the end of the function
-  this->consume_all_events(execution_event_queue);
+  this->consume_all_events(event_queue_);
 }
 
 void
-EventsExecutor::spin_all(std::chrono::nanoseconds max_duration)
+EventsExecutorLF::spin_all(std::chrono::nanoseconds max_duration)
 {
   if (max_duration <= 0ns) {
     throw std::invalid_argument("max_duration must be positive");
@@ -129,7 +122,7 @@ EventsExecutor::spin_all(std::chrono::nanoseconds max_duration)
   RCLCPP_SCOPE_EXIT(this->spinning.store(false););
 
   // When condition variable is notified, check this predicate to proceed
-  auto has_event_predicate = [this]() {return !event_queue_.empty();};
+  auto has_event_predicate = [this]() {return event_queue_.size_approx() != 0;};
 
   // Local event queue to allow entities to push events while we execute them
   EventQueue execution_event_queue;
@@ -162,7 +155,7 @@ EventsExecutor::spin_all(std::chrono::nanoseconds max_duration)
 
     // Exit if there is no more work to do
     const bool ready_timer = timeout < 0ns;
-    const bool has_events = !execution_event_queue.empty();
+    const bool has_events = execution_event_queue.size_approx() != 0;
     if (!ready_timer && !has_events) {
       break;
     }
@@ -174,7 +167,7 @@ EventsExecutor::spin_all(std::chrono::nanoseconds max_duration)
 }
 
 void
-EventsExecutor::spin_once_impl(std::chrono::nanoseconds timeout)
+EventsExecutorLF::spin_once_impl(std::chrono::nanoseconds timeout)
 {
   // In this context a negative input timeout means no timeout
   if (timeout < 0ns) {
@@ -188,7 +181,7 @@ EventsExecutor::spin_once_impl(std::chrono::nanoseconds timeout)
   }
 
   // When condition variable is notified, check this predicate to proceed
-  auto has_event_predicate = [this]() {return !event_queue_.empty();};
+  auto has_event_predicate = [this]() {return event_queue_.size_approx() != 0;};
 
   rmw_listener_event_t event;
   bool has_event = false;
@@ -197,14 +190,10 @@ EventsExecutor::spin_once_impl(std::chrono::nanoseconds timeout)
     // Wait until timeout or event arrives
     std::unique_lock<std::mutex> lock(push_mutex_);
     event_queue_cv_.wait_for(lock, timeout, has_event_predicate);
-
-    // Grab first event from queue if it exists
-    has_event = !event_queue_.empty();
-    if (has_event) {
-      event = event_queue_.front();
-      event_queue_.pop();
-    }
   }
+
+  // Grab first event from queue if it exists
+  has_event = event_queue_.try_dequeue(event);
 
   // If we wake up from the wait with an event, it means that it
   // arrived before any of the timers expired.
@@ -216,7 +205,7 @@ EventsExecutor::spin_once_impl(std::chrono::nanoseconds timeout)
 }
 
 void
-EventsExecutor::add_node(
+EventsExecutorLF::add_node(
   rclcpp::node_interfaces::NodeBaseInterface::SharedPtr node_ptr, bool notify)
 {
   // This field is unused because we don't have to wake up the executor when a node is added.
@@ -227,13 +216,13 @@ EventsExecutor::add_node(
 }
 
 void
-EventsExecutor::add_node(std::shared_ptr<rclcpp::Node> node_ptr, bool notify)
+EventsExecutorLF::add_node(std::shared_ptr<rclcpp::Node> node_ptr, bool notify)
 {
   this->add_node(node_ptr->get_node_base_interface(), notify);
 }
 
 void
-EventsExecutor::remove_node(
+EventsExecutorLF::remove_node(
   rclcpp::node_interfaces::NodeBaseInterface::SharedPtr node_ptr, bool notify)
 {
   // This field is unused because we don't have to wake up the executor when a node is removed.
@@ -247,24 +236,28 @@ EventsExecutor::remove_node(
 }
 
 void
-EventsExecutor::remove_node(std::shared_ptr<rclcpp::Node> node_ptr, bool notify)
+EventsExecutorLF::remove_node(std::shared_ptr<rclcpp::Node> node_ptr, bool notify)
 {
   this->remove_node(node_ptr->get_node_base_interface(), notify);
 }
 
 void
-EventsExecutor::consume_all_events(EventQueue & event_queue)
+EventsExecutorLF::consume_all_events(EventQueue & event_queue)
 {
-  while (!event_queue.empty()) {
-    rmw_listener_event_t event = event_queue.front();
-    event_queue.pop();
+  rmw_listener_event_t event;
+  bool has_event;
 
-    this->execute_event(event);
-  }
+  do {
+    // Grab first event from queue if it exists
+    has_event = event_queue_.try_dequeue(event);
+    if (has_event) {
+      this->execute_event(event);
+    }
+  } while (has_event);
 }
 
 void
-EventsExecutor::execute_event(const rmw_listener_event_t & event)
+EventsExecutorLF::execute_event(const rmw_listener_event_t & event)
 {
   switch (event.type) {
     case SUBSCRIPTION_EVENT:
@@ -310,7 +303,7 @@ EventsExecutor::execute_event(const rmw_listener_event_t & event)
 }
 
 void
-EventsExecutor::add_callback_group(
+EventsExecutorLF::add_callback_group(
   rclcpp::CallbackGroup::SharedPtr group_ptr,
   rclcpp::node_interfaces::NodeBaseInterface::SharedPtr node_ptr,
   bool notify)
@@ -322,7 +315,7 @@ EventsExecutor::add_callback_group(
 }
 
 void
-EventsExecutor::remove_callback_group(
+EventsExecutorLF::remove_callback_group(
   rclcpp::CallbackGroup::SharedPtr group_ptr, bool notify)
 {
   // This field is unused because we don't have to wake up
@@ -332,19 +325,19 @@ EventsExecutor::remove_callback_group(
 }
 
 std::vector<rclcpp::CallbackGroup::WeakPtr>
-EventsExecutor::get_all_callback_groups()
+EventsExecutorLF::get_all_callback_groups()
 {
   return entities_collector_->get_all_callback_groups();
 }
 
 std::vector<rclcpp::CallbackGroup::WeakPtr>
-EventsExecutor::get_manually_added_callback_groups()
+EventsExecutorLF::get_manually_added_callback_groups()
 {
   return entities_collector_->get_manually_added_callback_groups();
 }
 
 std::vector<rclcpp::CallbackGroup::WeakPtr>
-EventsExecutor::get_automatically_added_callback_groups_from_nodes()
+EventsExecutorLF::get_automatically_added_callback_groups_from_nodes()
 {
   return entities_collector_->get_automatically_added_callback_groups_from_nodes();
 }

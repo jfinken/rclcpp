@@ -20,6 +20,8 @@
 #include <queue>
 #include <vector>
 
+#include "rclcpp/experimental/buffers/concurrentqueue.h"
+
 #include "rclcpp/executor.hpp"
 #include "rclcpp/executors/events_executor_entities_collector.hpp"
 #include "rclcpp/executors/events_executor_notify_waitable.hpp"
@@ -41,29 +43,29 @@ namespace executors
  * This provides improved performance as it allows to skip all the waitset maintenance operations.
  *
  * To run this executor:
- * rclcpp::executors::EventsExecutor executor;
+ * rclcpp::executors::EventsExecutorLF executor;
  * executor.add_node(node);
  * executor.spin();
  * executor.remove_node(node);
  */
-class EventsExecutor : public rclcpp::Executor
+class EventsExecutorLF : public rclcpp::Executor
 {
   friend class EventsExecutorEntitiesCollector;
 
 public:
-  RCLCPP_SMART_PTR_DEFINITIONS(EventsExecutor)
+  RCLCPP_SMART_PTR_DEFINITIONS(EventsExecutorLF)
 
   /// Default constructor. See the default constructor for Executor.
   /**
    * \param[in] options Options used to configure the executor.
    */
   RCLCPP_PUBLIC
-  explicit EventsExecutor(
+  explicit EventsExecutorLF(
     const rclcpp::ExecutorOptions & options = rclcpp::ExecutorOptions());
 
   /// Default destrcutor.
   RCLCPP_PUBLIC
-  virtual ~EventsExecutor() = default;
+  virtual ~EventsExecutorLF() = default;
 
   /// Events executor implementation of spin.
   /**
@@ -102,7 +104,7 @@ public:
 
   /// Convenience function which takes Node and forwards NodeBaseInterface.
   /**
-   * \sa rclcpp::EventsExecutor::add_node
+   * \sa rclcpp::EventsExecutorLF::add_node
    */
   RCLCPP_PUBLIC
   void
@@ -172,9 +174,9 @@ protected:
   spin_once_impl(std::chrono::nanoseconds timeout) override;
 
 private:
-  RCLCPP_DISABLE_COPY(EventsExecutor)
+  RCLCPP_DISABLE_COPY(EventsExecutorLF)
 
-  using EventQueue = std::queue<rmw_listener_event_t>;
+  using EventQueue = moodycamel::ConcurrentQueue<rmw_listener_event_t>;
 
   // Executor callback: Push new events into the queue and trigger cv.
   // This function is called by the DDS entities when an event happened,
@@ -183,14 +185,11 @@ private:
   push_event(const void * executor_ptr, rmw_listener_event_t event)
   {
     // Cast executor_ptr to this (need to remove constness)
-    auto this_executor = const_cast<executors::EventsExecutor *>(
-      static_cast<const executors::EventsExecutor *>(executor_ptr));
+    auto this_executor = const_cast<executors::EventsExecutorLF *>(
+      static_cast<const executors::EventsExecutorLF *>(executor_ptr));
 
-    // Event queue mutex scope
     {
-      std::unique_lock<std::mutex> lock(this_executor->push_mutex_);
-
-      this_executor->event_queue_.push(event);
+      this_executor->event_queue_.enqueue(event);
     }
     // Notify that the event queue has some events in it.
     this_executor->event_queue_cv_.notify_one();
