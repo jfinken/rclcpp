@@ -74,7 +74,6 @@ public:
     std::lock_guard<std::mutex> lock(mutex_);
 
     if (!has_data()) {
-      RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Calling dequeue on empty intra-process buffer");
       return BufferT();
     }
 
