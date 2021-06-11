@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef RCLCPP__EXPERIMENTAL__BUFFERS__BLOCKING_CONCURRENT_QUEUE_HPP_
-#define RCLCPP__EXPERIMENTAL__BUFFERS__BLOCKING_CONCURRENT_QUEUE_HPP_
+#ifndef RCLCPP__EXPERIMENTAL__BUFFERS__LOCK_FREE_EVENTS_QUEUE_HPP_
+#define RCLCPP__EXPERIMENTAL__BUFFERS__LOCK_FREE_EVENTS_QUEUE_HPP_
 
 #include <queue>
 
@@ -38,11 +38,11 @@ namespace buffers
  * queue aims to fix the issue of publishers being blocked by the executor extracting
  * events from the queue in a different thread, causing expensive mutex contention.
  */
-class BlockingConcurrentQueue : public EventsQueue
+class LockFreeEventsQueue : public EventsQueue
 {
 public:
   RCLCPP_PUBLIC
-  ~BlockingConcurrentQueue() override
+  ~LockFreeEventsQueue() override
   {
     // It's important that all threads have finished using the queue
     // and the memory effects have fully propagated, before it is destructed.
@@ -134,4 +134,4 @@ private:
 }  // namespace rclcpp
 
 
-#endif  // RCLCPP__EXPERIMENTAL__BUFFERS__BLOCKING_CONCURRENT_QUEUE_HPP_
+#endif  // RCLCPP__EXPERIMENTAL__BUFFERS__LOCK_FREE_EVENTS_QUEUE_HPP_
