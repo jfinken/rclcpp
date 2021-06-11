@@ -93,7 +93,7 @@ public:
   RCLCPP_PUBLIC
   virtual
   bool
-  wait_for_event(
+  dequeue(
     rclcpp::executors::ExecutorEvent & event,
     std::chrono::nanoseconds timeout = std::chrono::nanoseconds::max()) = 0;
 };

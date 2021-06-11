@@ -88,7 +88,7 @@ public:
    */
   RCLCPP_PUBLIC
   bool
-  wait_for_event(
+  dequeue(
     rclcpp::executors::ExecutorEvent & event,
     std::chrono::nanoseconds timeout = std::chrono::nanoseconds::max()) override
   {
