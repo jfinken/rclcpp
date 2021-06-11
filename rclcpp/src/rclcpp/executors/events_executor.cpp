@@ -66,17 +66,9 @@ EventsExecutor::spin()
     // Wait until we get an event
     ExecutorEvent event;
     bool has_event = events_queue_->dequeue(event);
-    std::cout<<"Has event ---> "<< has_event<<std::endl;
     if (has_event) {
         this->execute_event(event);
     }
-
-    // Process rest of events, if any
-    //while (!events_queue_->empty())
-    //{
-    //  event = events_queue_->dequeue();
-    //  this->execute_event(event);
-    //}
   }
 
   // Stop the timers manager thread when we are done spinning
