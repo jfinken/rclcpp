@@ -65,7 +65,7 @@ EventsExecutor::spin()
   while (rclcpp::ok(context_) && spinning.load()) {
     // Wait until we get an event
     ExecutorEvent event;
-    bool has_event = events_queue_->dequeue(event);
+    bool has_event = events_queue_->dequeue(event, timers_manager_->MAX_TIME);
     if (has_event) {
       this->execute_event(event);
     }
@@ -126,7 +126,7 @@ EventsExecutor::spin_some_impl(std::chrono::nanoseconds max_duration, bool exhau
 
       if (has_event) {
         ExecutorEvent event;
-        bool ret = events_queue_->dequeue(event);
+        bool ret = events_queue_->dequeue(event, std::chrono::nanoseconds(0));
         if (ret) {
             this->execute_event(event);
             executed_events++;
