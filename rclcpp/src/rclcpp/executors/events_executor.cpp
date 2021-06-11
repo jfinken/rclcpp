@@ -65,9 +65,11 @@ EventsExecutor::spin()
   while (rclcpp::ok(context_) && spinning.load()) {
     // Wait until we get an event
     ExecutorEvent event;
-    bool has_event = events_queue_->dequeue(event, std::chrono::milliseconds(1000));
+    bool has_event = events_queue_->dequeue(event, std::chrono::seconds(1000));
     if (has_event) {
       this->execute_event(event);
+    } else {
+        std::cout<<"Events executor " << this << " --> spin without event"<<std::endl;
     }
   }
 
