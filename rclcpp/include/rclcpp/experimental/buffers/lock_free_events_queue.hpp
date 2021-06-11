@@ -83,6 +83,25 @@ public:
   }
 
   /**
+   * @brief waits for an event until timeout
+   * @return true if event, false if timeout
+   */
+  RCLCPP_PUBLIC
+  bool
+  wait_for_event(
+    rclcpp::executors::ExecutorEvent & event,
+    std::chrono::nanoseconds timeout = std::chrono::nanoseconds::max()) override
+  {
+    if (timeout != std::chrono::nanoseconds::max()) {
+      return event_queue_.wait_dequeue_timed(event, timeout);
+    }
+
+    // If no timeout specified, just wait for an event to arrive
+    event_queue_.wait_dequeue(event);
+    return true;
+  }
+
+  /**
    * @brief Test whether queue is empty
    * @return true if the queue's size is 0, false otherwise.
    */
@@ -104,25 +123,6 @@ public:
   size() const override
   {
     return event_queue_.size_approx();
-  }
-
-  /**
-   * @brief waits for an event until timeout
-   * @return true if event, false if timeout
-   */
-  RCLCPP_PUBLIC
-  bool
-  wait_for_event(
-    rclcpp::executors::ExecutorEvent & event,
-    std::chrono::nanoseconds timeout = std::chrono::nanoseconds::max()) override
-  {
-    if (timeout != std::chrono::nanoseconds::max()) {
-      return event_queue_.wait_dequeue_timed(event, timeout);
-    }
-
-    // If no timeout specified, just wait for an event to arrive
-    event_queue_.wait_dequeue(event);
-    return true;
   }
 
 private:
