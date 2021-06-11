@@ -68,6 +68,7 @@ EventsExecutor::spin()
     events_queue_->wait_for_event(event);
     this->execute_event(event);
 
+    //std::cout<<"LOG"<<std::endl;
     // Process rest of events, if any
     //while (!events_queue_->empty())
     //{

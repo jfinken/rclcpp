@@ -92,6 +92,7 @@ public:
     rclcpp::executors::ExecutorEvent & event,
     std::chrono::nanoseconds timeout = std::chrono::nanoseconds::max()) override
   {
+    /*
     if (timeout != std::chrono::nanoseconds::max()) {
       return event_queue_.wait_dequeue_timed(event, timeout);
     }
@@ -99,6 +100,8 @@ public:
     // If no timeout specified, just wait for an event to arrive
     event_queue_.wait_dequeue(event);
     return true;
+    */
+    return event_queue_.wait_dequeue_timed(event, timeout);
   }
 
   /**
