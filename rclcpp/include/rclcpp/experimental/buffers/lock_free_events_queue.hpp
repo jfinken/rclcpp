@@ -67,22 +67,6 @@ public:
   }
 
   /**
-   * @brief dequeue the front event from the queue.
-   * The event is removed from the queue after this operation.
-   * Callers should make sure the queue is not empty before calling.
-   *
-   * @return the front event
-   */
-  RCLCPP_PUBLIC
-  rclcpp::executors::ExecutorEvent
-  dequeue() override
-  {
-    rclcpp::executors::ExecutorEvent event;
-    event_queue_.try_dequeue(event);
-    return event;
-  }
-
-  /**
    * @brief waits for an event until timeout
    * @return true if event, false if timeout
    */
@@ -92,15 +76,6 @@ public:
     rclcpp::executors::ExecutorEvent & event,
     std::chrono::nanoseconds timeout = std::chrono::nanoseconds::max()) override
   {
-    /*
-    if (timeout != std::chrono::nanoseconds::max()) {
-      return event_queue_.wait_dequeue_timed(event, timeout);
-    }
-
-    // If no timeout specified, just wait for an event to arrive
-    event_queue_.wait_dequeue(event);
-    return true;
-    */
     return event_queue_.wait_dequeue_timed(event, timeout);
   }
 

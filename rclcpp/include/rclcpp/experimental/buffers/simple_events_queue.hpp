@@ -61,21 +61,25 @@ public:
   }
 
   /**
-   * @brief dequeue the front event from the queue.
-   * The event is removed from the queue after this operation.
-   * Callers should make sure the queue is not empty before calling.
-   * Thread safe
-   *
-   * @return the front event
+   * @brief gets the front event from the queue, eventually waiting for it
+   * @return true if event, false if timeout
    */
   RCLCPP_PUBLIC
-  rclcpp::executors::ExecutorEvent
-  dequeue() override
+  bool
+  dequeue(
+    rclcpp::executors::ExecutorEvent & event,
+    std::chrono::nanoseconds timeout = std::chrono::nanoseconds::max()) override
   {
     std::unique_lock<std::mutex> lock(this->push_mutex_);
-    rclcpp::executors::ExecutorEvent event = event_queue_.front();
-    event_queue_.pop();
-    return event;
+
+    bool notified = events_queue_cv_.wait_for(lock, timeout, [this]() {return !event_queue_.empty();});
+    if (notified) {
+      event = event_queue_.front();
+      event_queue_.pop();
+      return true;
+    }
+    
+    return false;
   }
 
   /**
@@ -102,40 +106,6 @@ public:
   {
     std::unique_lock<std::mutex> lock(this->push_mutex_);
     return event_queue_.size();
-  }
-
-  /**
-   * @brief waits for an event until timeout, gets a single event
-   * Thread safe
-   * @return true if event, false if timeout
-   */
-  RCLCPP_PUBLIC
-  bool
-  dequeue(
-    rclcpp::executors::ExecutorEvent & event,
-    std::chrono::nanoseconds timeout = std::chrono::nanoseconds::max()) override
-  {
-    auto has_event_predicate = [this]() {return !event_queue_.empty();};
-
-    std::unique_lock<std::mutex> lock(this->push_mutex_);
-
-    if (timeout != std::chrono::nanoseconds::max()) {
-      // We wait here until timeout or until something is pushed into the queue
-      events_queue_cv_.wait_for(lock, timeout, has_event_predicate);
-      if (event_queue_.empty()) {
-        return false;
-      } else {
-        event = event_queue_.front();
-        event_queue_.pop();
-        return true;
-      }
-    } else {
-      // We wait here until something has been pushed into the queue
-      events_queue_cv_.wait(lock, has_event_predicate);
-      event = event_queue_.front();
-      event_queue_.pop();
-      return true;
-    }
   }
 
 private:

@@ -60,13 +60,15 @@ public:
   enqueue(const rclcpp::executors::ExecutorEvent & event) = 0;
 
   /**
-   * @brief gets the front event from the queue
-   * @return the front event
+   * @brief waits for an event until timeout
+   * @return true if event, false if timeout
    */
   RCLCPP_PUBLIC
   virtual
-  rclcpp::executors::ExecutorEvent
-  dequeue() = 0;
+  bool
+  dequeue(
+    rclcpp::executors::ExecutorEvent & event,
+    std::chrono::nanoseconds timeout = std::chrono::nanoseconds::max()) = 0;
 
   /**
    * @brief Test whether queue is empty
@@ -86,16 +88,6 @@ public:
   size_t
   size() const = 0;
 
-  /**
-   * @brief waits for an event until timeout
-   * @return true if event, false if timeout
-   */
-  RCLCPP_PUBLIC
-  virtual
-  bool
-  dequeue(
-    rclcpp::executors::ExecutorEvent & event,
-    std::chrono::nanoseconds timeout = std::chrono::nanoseconds::max()) = 0;
 };
 
 }  // namespace buffers
