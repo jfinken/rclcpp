@@ -16,6 +16,7 @@
 #include <stdexcept>
 
 #include "rclcpp/executors/timers_manager.hpp"
+#include <iostream>
 
 using rclcpp::executors::TimersManager;
 
@@ -121,6 +122,7 @@ bool TimersManager::execute_head_timer(
   std::unique_lock<std::mutex> lock(timers_mutex_);
 
   TimersHeap timers_heap = weak_timers_heap_.validate_and_lock();
+  std::cout<<"Timers heap size: "<< timers_heap.size()<< std::endl;
 
   // Nothing to do if we don't have any timer
   if (timers_heap.empty()) {
@@ -128,6 +130,7 @@ bool TimersManager::execute_head_timer(
   }
 
   TimerPtr head = timers_heap.front();
+  std::cout<<"Head ready: "<< head->is_ready() << " time until ready "<< head->time_until_trigger()<< std::endl;
 
   bool timer_ready = false;
   if (tp != std::chrono::time_point<std::chrono::steady_clock>::max()) {
