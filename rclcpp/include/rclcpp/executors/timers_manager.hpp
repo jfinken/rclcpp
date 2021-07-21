@@ -360,6 +360,14 @@ public:
     }
 
     /**
+     * @brief Returns whether the heap is empty or not
+     */
+    bool size() const
+    {
+      return owned_heap_.size();
+    }
+
+    /**
     * @brief Restore a valid heap after the root value has been replaced (e.g. timer triggered).
     */
     void heapify_root()
