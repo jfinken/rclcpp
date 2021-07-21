@@ -225,7 +225,7 @@ void TimeSource::clock_cb(const rosgraph_msgs::msg::Clock::SharedPtr msg)
   last_msg_set_ = msg;
   auto time_msg = std::make_shared<builtin_interfaces::msg::Time>(msg->clock);
 
-  std::cout<<"Time clock callback --> "<<time_msg->nanoseconds <<std::endl;
+  std::cout<<"Time clock callback --> "<<time_msg->nanosec <<std::endl;
 
   if (SET_TRUE == this->parameter_state_) {
     std::lock_guard<std::mutex> guard(clock_list_lock_);
