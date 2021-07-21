@@ -130,7 +130,7 @@ bool TimersManager::execute_head_timer(
   }
 
   TimerPtr head = timers_heap.front();
-  std::cout<<"Head ready: "<< head->is_ready() << " time until ready "<< head->time_until_trigger()<< std::endl;
+  std::cout<<"Head ready: "<< head->is_ready() << " time until ready "<< head->time_until_trigger().count()<< std::endl;
 
   bool timer_ready = false;
   if (tp != std::chrono::time_point<std::chrono::steady_clock>::max()) {
