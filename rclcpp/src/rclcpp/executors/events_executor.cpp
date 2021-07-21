@@ -21,6 +21,8 @@
 #include "rclcpp/exceptions/exceptions.hpp"
 #include "rclcpp/executors/events_executor.hpp"
 
+#include <iostream>
+
 using namespace std::chrono_literals;
 
 using rclcpp::executors::EventsExecutor;
@@ -227,6 +229,7 @@ EventsExecutor::execute_event(const ExecutorEvent & event)
 
         if (subscription) {
           for (size_t i = 0; i < event.num_events; i++) {
+            std::cout<<"Execute subscription"<<std::endl;
             execute_subscription(subscription);
           }
         }
@@ -263,6 +266,7 @@ EventsExecutor::execute_event(const ExecutorEvent & event)
 
         if (waitable) {
           for (size_t i = 0; i < event.num_events; i++) {
+            std::cout<<"Execute waitable"<<std::endl;
             auto data = waitable->take_data();
             waitable->execute(data);
           }

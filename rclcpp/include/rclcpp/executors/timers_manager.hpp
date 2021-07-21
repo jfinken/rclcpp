@@ -457,7 +457,7 @@ private:
   {
     // A ready timer will return a negative duration when calling time_until_trigger
     auto time_ready = std::chrono::steady_clock::now() + timer->time_until_trigger();
-    return time_ready < tp;
+    return time_ready <= tp;
   }
 
   // Thread used to run the timers execution task
