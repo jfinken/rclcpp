@@ -111,13 +111,11 @@ EventsExecutor::spin_some_impl(std::chrono::nanoseconds max_duration, bool exhau
       return elapsed_time < max_duration;
     };
 
-  size_t ready_events_at_start = 0;
+  // Get the number of events and timers ready at start
+  size_t ready_events_at_start = events_queue_->size();
   size_t executed_events = 0;
-
-  if (!exhaustive) {
-    // Get the number of events ready at start
-    ready_events_at_start = events_queue_->size();
-  }
+  size_t ready_timers_at_start = timers_manager_->get_number_ready_timers();
+  size_t executed_timers = 0;
 
   while (rclcpp::ok(context_) && spinning.load() && max_duration_not_elapsed()) {
     // Execute first ready event from queue if exists
@@ -135,18 +133,12 @@ EventsExecutor::spin_some_impl(std::chrono::nanoseconds max_duration, bool exhau
       }
     }
 
-    bool timer_executed;
-
-    if (exhaustive) {
-      // Execute timer if is ready
-      timer_executed = timers_manager_->execute_head_timer();
-    } else {
-      // Execute timer if was ready at start
-      timer_executed = timers_manager_->execute_head_timer(start);
-    }
-
-    if (timer_executed) {
-      continue;
+    // Execute first timer if it is ready
+    if (exhaustive || (executed_timers < ready_timers_at_start)) {
+      bool timer_executed = timers_manager_->execute_head_timer();
+      if (timer_executed) {
+        continue;
+      }
     }
 
     // If there's no more work available, exit

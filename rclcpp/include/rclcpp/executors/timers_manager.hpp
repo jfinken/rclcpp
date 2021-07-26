@@ -119,15 +119,21 @@ public:
   void execute_ready_timers();
 
   /**
-   * @brief Executes head timer if ready at time point.
+   * @brief Get the number of timers that are currently
+   * ready.
+   * Function is thread safe, but it will throw an error if the timers thread is running.
+   * 
+   * @return size_t number of ready timers
+   */
+  size_t get_number_ready_timers();
+
+  /**
+   * @brief Executes head timer if ready.
    * Function is thread safe, but it will throw an error if the timers thread is running.
    *
-   * @param tp the time point to check for, where `max()` denotes that no check will be performed.
-   * @return true if head timer was ready at time point.
+   * @return true if head timer was ready.
    */
-  bool execute_head_timer(
-    std::chrono::time_point<std::chrono::steady_clock> tp =
-    std::chrono::time_point<std::chrono::steady_clock>::max());
+  bool execute_head_timer();
 
   /**
    * @brief Get the amount of time before the next timer expires.
@@ -360,6 +366,24 @@ public:
     }
 
     /**
+     * @brief Get the number of timers that are currently
+     * ready
+     * @return size_t number of ready timers
+     */
+    size_t get_number_ready_timers() const
+    {
+      size_t ready_timers = 0;
+      
+      for (TimerPtr t : owned_heap_) {
+        if (t->is_ready()) {
+          ready_timers++;    
+        }
+      }
+
+      return ready_timers;
+    }
+
+    /**
     * @brief Restore a valid heap after the root value has been replaced (e.g. timer triggered).
     */
     void heapify_root()
@@ -435,22 +459,6 @@ private:
    * This function is not thread safe, acquire the timers_mutex_ before calling it.
    */
   void execute_ready_timers_unsafe();
-
-  /**
-   * @brief Helper function that checks whether a timer was already ready
-   * at a specific time point.
-   * @param timer a pointer to the timer to check for
-   * @param tp the time point to check for
-   * @return true if timer was ready at tp
-   */
-  bool timer_was_ready_at_tp(
-    TimerPtr timer,
-    std::chrono::time_point<std::chrono::steady_clock> tp)
-  {
-    // A ready timer will return a negative duration when calling time_until_trigger
-    auto time_ready = std::chrono::steady_clock::now() + timer->time_until_trigger();
-    return time_ready < tp;
-  }
 
   // Thread used to run the timers execution task
   std::thread timers_thread_;

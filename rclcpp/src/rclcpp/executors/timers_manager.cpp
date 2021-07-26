@@ -97,6 +97,19 @@ std::chrono::nanoseconds TimersManager::get_head_timeout()
   return this->get_head_timeout_unsafe();
 }
 
+size_t TimersManager::get_number_ready_timers()
+{
+  // Do not allow to interfere with the thread running
+  if (running_) {
+    throw std::runtime_error(
+            "TimersManager::get_number_ready_timers() can't be used while timers thread is running");
+  }
+
+  std::unique_lock<std::mutex> lock(timers_mutex_);
+  TimersHeap timers_heap = weak_timers_heap_.validate_and_lock();
+  return timers_heap->get_number_ready_timers();
+}
+
 void TimersManager::execute_ready_timers()
 {
   // Do not allow to interfere with the thread running
@@ -109,8 +122,7 @@ void TimersManager::execute_ready_timers()
   this->execute_ready_timers_unsafe();
 }
 
-bool TimersManager::execute_head_timer(
-  std::chrono::time_point<std::chrono::steady_clock> tp)
+bool TimersManager::execute_head_timer()
 {
   // Do not allow to interfere with the thread running
   if (running_) {
@@ -128,24 +140,17 @@ bool TimersManager::execute_head_timer(
   }
 
   TimerPtr head = timers_heap.front();
-
-  bool timer_ready = false;
-  if (tp != std::chrono::time_point<std::chrono::steady_clock>::max()) {
-    timer_ready = timer_was_ready_at_tp(head, tp);
-  } else {
-    timer_ready = head->is_ready();
-  }
+  bool timer_ready = head->is_ready();
 
   if (timer_ready) {
     // Head timer is ready, execute
     head->execute_callback();
     timers_heap.heapify_root();
     weak_timers_heap_.store(timers_heap);
-    return true;
   }
 
   // Head timer was not ready yet
-  return false;
+  return timer_ready;
 }
 
 std::chrono::nanoseconds TimersManager::get_head_timeout_unsafe()
@@ -195,14 +200,16 @@ void TimersManager::execute_ready_timers_unsafe()
   // time required for executing the timers is longer than their period.
 
   TimerPtr head = locked_heap.front();
-  auto start_time = std::chrono::steady_clock::now();
-  while (head->is_ready() && this->timer_was_ready_at_tp(head, start_time)) {
+  const size_t number_ready_timers = locked_heap->get_number_ready_timers();
+  size_t executed_timers = 0;
+  while (head->is_ready() && executed_timers < number_ready_timers) {
     // Execute head timer
     head->execute_callback();
     // Executing a timer will result in updating its time_until_trigger, so re-heapify
     locked_heap.heapify_root();
     // Get new head timer
     head = locked_heap.front();
+    executed_timers++;
   }
 
   // After having performed work on the locked heap we reflect the changes to weak one.
