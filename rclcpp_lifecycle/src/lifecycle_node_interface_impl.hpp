@@ -385,7 +385,7 @@ public:
       return RCL_RET_ERROR;
     }
 
-    constexpr bool publish_update = true;
+    constexpr bool publish_update = false;
     // keep the initial state to pass to a transition callback
     State initial_state(state_machine_.current_state);
 
