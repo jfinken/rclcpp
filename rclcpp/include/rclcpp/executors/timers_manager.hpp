@@ -98,14 +98,18 @@ public:
    * the returned value could be negative if the timer is already expired
    * or MAX_TIME if the heap is empty.
    */
-  std::chrono::nanoseconds execute_ready_timers();
+  void execute_ready_timers();
 
   /**
-   * @brief Executes one ready timer if available
+   * @brief Executes head timer if ready at time point.
+   * Function is thread safe, but it will throw an error if the timers thread is running.
    *
-   * @return true if there was a timer ready
+   * @param tp the time point to check for, where `max()` denotes that no check will be performed.
+   * @return true if head timer was ready at time point.
    */
-  bool execute_head_timer();
+  bool execute_head_timer(
+    std::chrono::time_point<std::chrono::steady_clock> tp =
+    std::chrono::time_point<std::chrono::steady_clock>::max());
 
   /**
    * @brief Get the amount of time before the next timer expires.
@@ -190,6 +194,22 @@ public:
     }
 
     /**
+     * @brief Returns a const reference to the front element
+     */
+    const WeakTimerPtr & front() const
+    {
+      return weak_heap_.front();
+    }
+
+    /**
+     * @brief Returns whether the heap is empty or not
+     */
+    bool empty() const
+    {
+      return weak_heap_.empty();
+    }
+
+    /**
      * @brief This function restores the current object as a valid heap
      * and it also returns a locked version of it
      * @return TimersHeap owned timers corresponding to the current object
@@ -203,8 +223,9 @@ public:
 
       while (it != weak_heap_.end()) {
         if (auto timer_shared_ptr = it->lock()) {
-          // This timer is valid, add it to the vector
-          locked_heap.push_back(std::move(timer_shared_ptr));
+          // This timer is valid, add it to the locked heap
+          // Note: we access private `owned_heap_` member field.
+          locked_heap.owned_heap_.push_back(std::move(timer_shared_ptr));
           it++;
         } else {
           // This timer went out of scope, remove it
@@ -348,16 +369,10 @@ public:
     }
 
     /**
-     * @brief Convenience function that allows to push an element at the bottom of the heap.
-     * It will not perform any check on whether the heap remains valid or not.
-     * Those checks are responsibility of the calling code.
-     *
-     * @param timer timer to push at the back of the data structure representing the heap
+     * @brief Friend declaration to allow the `validate_and_lock()` function to access the
+     * underlying heap container
      */
-    void push_back(TimerPtr timer)
-    {
-      owned_heap_.push_back(timer);
-    }
+    friend TimersHeap WeakTimersHeap::validate_and_lock();
 
     /**
      * @brief Friend declaration to allow the store function to access the underlying
@@ -391,20 +406,14 @@ private:
    * the returned value could be negative if the timer is already expired
    * or MAX_TIME if the heap is empty.
    */
-  std::chrono::nanoseconds get_head_timeout_unsafe(const TimersHeap & heap)
-  {
-    if (heap.empty()) {
-      return MAX_TIME;
-    }
-    return (heap.front())->time_until_trigger();
-  }
+  std::chrono::nanoseconds get_head_timeout_unsafe();
 
   /**
    * @brief Executes all the timers currently ready when the function is invoked
    * while keeping the heap correctly sorted.
-   * This function is not thread safe, acquire a mutex before calling it.
+   * This function is not thread safe, acquire the timers_mutex_ before calling it.
    */
-  void execute_ready_timers_unsafe(TimersHeap & heap);
+  void execute_ready_timers_unsafe();
 
   /**
    * @brief Helper function that checks whether a timer was already ready
