@@ -145,9 +145,6 @@ public:
   ~TimeSource();
 
 private:
-  class ClocksState;
-  std::shared_ptr<ClocksState> clocks_state_;
-
   class NodeState;
   std::shared_ptr<NodeState> node_state_;
 
