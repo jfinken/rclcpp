@@ -177,7 +177,7 @@ public:
 
     event_subscription_ = rclcpp::create_subscription<rcl_interfaces::msg::ParameterEvent>(
       node_topics, "/parameter_events", qos,
-      [callbacks = callbacks_](const rcl_interfaces::msg::ParameterEvent & event) {
+      [callbacks = callbacks_](rcl_interfaces::msg::ParameterEvent event) {
         callbacks->event_callback(event);
       });
   }
