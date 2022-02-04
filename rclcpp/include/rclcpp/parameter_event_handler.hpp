@@ -52,7 +52,7 @@ struct ParameterEventCallbackHandle
   RCLCPP_SMART_PTR_DEFINITIONS(ParameterEventCallbackHandle)
 
   using ParameterEventCallbackType =
-    std::function<void (const rcl_interfaces::msg::ParameterEvent &)>;
+    std::function<void (const rcl_interfaces::msg::ParameterEvent::SharedPtr &)>;
 
   ParameterEventCallbackType callback;
 };
@@ -333,7 +333,7 @@ protected:
     /// Callback for parameter events subscriptions.
     RCLCPP_PUBLIC
     void
-    event_callback(const rcl_interfaces::msg::ParameterEvent & event);
+    event_callback(const rcl_interfaces::msg::ParameterEvent::SharedPtr & event);
   };
 
   std::shared_ptr<Callbacks> callbacks_;
