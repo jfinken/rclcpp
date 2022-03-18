@@ -126,7 +126,8 @@ typename Client<ServiceT>::SharedPtr
 Node::create_client(
   const std::string & service_name,
   const rmw_qos_profile_t & qos_profile,
-  rclcpp::CallbackGroup::SharedPtr group)
+  rclcpp::CallbackGroup::SharedPtr group,
+  rclcpp::IntraProcessSetting ipc_setting)
 {
   return rclcpp::create_client<ServiceT>(
     node_base_,
@@ -134,7 +135,8 @@ Node::create_client(
     node_services_,
     extend_name_with_sub_namespace(service_name, this->get_sub_namespace()),
     qos_profile,
-    group);
+    group,
+    ipc_setting);
 }
 
 template<typename ServiceT, typename CallbackT>
@@ -143,7 +145,8 @@ Node::create_service(
   const std::string & service_name,
   CallbackT && callback,
   const rmw_qos_profile_t & qos_profile,
-  rclcpp::CallbackGroup::SharedPtr group)
+  rclcpp::CallbackGroup::SharedPtr group,
+  rclcpp::IntraProcessSetting ipc_setting)
 {
   return rclcpp::create_service<ServiceT, CallbackT>(
     node_base_,
@@ -151,7 +154,8 @@ Node::create_service(
     extend_name_with_sub_namespace(service_name, this->get_sub_namespace()),
     std::forward<CallbackT>(callback),
     qos_profile,
-    group);
+    group,
+    ipc_setting);
 }
 
 template<typename AllocatorT>

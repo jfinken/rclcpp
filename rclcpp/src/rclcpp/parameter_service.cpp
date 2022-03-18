@@ -33,6 +33,13 @@ ParameterService::ParameterService(
 {
   const std::string node_name = node_base->get_name();
 
+  rclcpp::IntraProcessSetting ipc_setting;
+  if (node_base->get_use_intra_process_default()) {
+    ipc_setting = rclcpp::IntraProcessSetting::Enable;
+  } else {
+    ipc_setting = rclcpp::IntraProcessSetting::Disable;
+  }
+
   get_parameters_service_ = create_service<rcl_interfaces::srv::GetParameters>(
     node_base, node_services,
     node_name + "/" + parameter_service_names::get_parameters,
@@ -50,7 +57,7 @@ ParameterService::ParameterService(
         RCLCPP_DEBUG(rclcpp::get_logger("rclcpp"), "Failed to get parameters: %s", ex.what());
       }
     },
-    qos_profile, nullptr);
+    qos_profile, nullptr, ipc_setting);
 
   get_parameter_types_service_ = create_service<rcl_interfaces::srv::GetParameterTypes>(
     node_base, node_services,
@@ -71,7 +78,7 @@ ParameterService::ParameterService(
         RCLCPP_DEBUG(rclcpp::get_logger("rclcpp"), "Failed to get parameter types: %s", ex.what());
       }
     },
-    qos_profile, nullptr);
+    qos_profile, nullptr, ipc_setting);
 
   set_parameters_service_ = create_service<rcl_interfaces::srv::SetParameters>(
     node_base, node_services,
@@ -96,7 +103,7 @@ ParameterService::ParameterService(
         response->results.push_back(result);
       }
     },
-    qos_profile, nullptr);
+    qos_profile, nullptr, ipc_setting);
 
   set_parameters_atomically_service_ = create_service<rcl_interfaces::srv::SetParametersAtomically>(
     node_base, node_services,
@@ -123,7 +130,7 @@ ParameterService::ParameterService(
         response->result.reason = "One or more parameters were not declared before setting";
       }
     },
-    qos_profile, nullptr);
+    qos_profile, nullptr, ipc_setting);
 
   describe_parameters_service_ = create_service<rcl_interfaces::srv::DescribeParameters>(
     node_base, node_services,
@@ -140,7 +147,7 @@ ParameterService::ParameterService(
         RCLCPP_DEBUG(rclcpp::get_logger("rclcpp"), "Failed to describe parameters: %s", ex.what());
       }
     },
-    qos_profile, nullptr);
+    qos_profile, nullptr, ipc_setting);
 
   list_parameters_service_ = create_service<rcl_interfaces::srv::ListParameters>(
     node_base, node_services,
@@ -153,5 +160,5 @@ ParameterService::ParameterService(
       auto result = node_params->list_parameters(request->prefixes, request->depth);
       response->result = result;
     },
-    qos_profile, nullptr);
+    qos_profile, nullptr, ipc_setting);
 }

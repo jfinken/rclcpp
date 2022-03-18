@@ -174,7 +174,7 @@ TEST_F(TestService, basic_public_getters) {
     }
     rclcpp::AnyServiceCallback<test_msgs::srv::Empty> cb;
     const rclcpp::Service<test_msgs::srv::Empty> base(
-      node_handle_int->get_node_base_interface()->get_shared_rcl_node_handle(),
+      node_handle_int->get_node_base_interface(),
       &service_handle, cb);
     // Use get_service_handle specific to const service
     std::shared_ptr<const rcl_service_t> const_service_handle = base.get_service_handle();

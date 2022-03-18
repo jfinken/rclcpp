@@ -32,13 +32,18 @@
 #include "rclcpp/detail/cpp_callback_trampoline.hpp"
 #include "rclcpp/exceptions.hpp"
 #include "rclcpp/expand_topic_or_service_name.hpp"
+#include "rclcpp/experimental/client_intra_process.hpp"
+#include "rclcpp/experimental/intra_process_manager.hpp"
 #include "rclcpp/function_traits.hpp"
+#include "rclcpp/intra_process_setting.hpp"
 #include "rclcpp/logging.hpp"
 #include "rclcpp/macros.hpp"
 #include "rclcpp/node_interfaces/node_graph_interface.hpp"
 #include "rclcpp/type_support_decl.hpp"
 #include "rclcpp/utilities.hpp"
 #include "rclcpp/visibility_control.hpp"
+
+#include "rcutils/logging_macros.h"
 
 #include "rmw/error_handling.h"
 #include "rmw/impl/cpp/demangle.hpp"
@@ -151,6 +156,25 @@ public:
   RCLCPP_PUBLIC
   bool
   exchange_in_use_by_wait_set_state(bool in_use_state);
+
+  using IntraProcessManagerWeakPtr =
+    std::weak_ptr<rclcpp::experimental::IntraProcessManager>;
+
+  /// Implementation detail.
+  RCLCPP_PUBLIC
+  void
+  setup_intra_process(
+    uint64_t intra_process_client_id,
+    IntraProcessManagerWeakPtr weak_ipm);
+
+  /// Return the waitable for intra-process
+  /**
+   * \return the waitable sharedpointer for intra-process, or nullptr if intra-process is not setup.
+   * \throws std::runtime_error if the intra process manager is destroyed
+   */
+  RCLCPP_PUBLIC
+  rclcpp::Waitable::SharedPtr
+  get_intra_process_waitable() const;
 
   /// Set a callback to be called when each new response is received.
   /**
@@ -265,6 +289,9 @@ protected:
   std::atomic<bool> in_use_by_wait_set_{false};
 
   std::recursive_mutex reentrant_mutex_;
+  bool use_intra_process_{false};
+  IntraProcessManagerWeakPtr weak_ipm_;
+  uint64_t intra_process_client_id_;
   std::function<void(size_t)> on_new_response_callback_{nullptr};
 };
 
@@ -299,12 +326,14 @@ public:
    * \param[in] node_graph The node graph interface of the corresponding node.
    * \param[in] service_name Name of the topic to publish to.
    * \param[in] client_options options for the subscription.
+   * \param[in] ipc_setting Intra-process communication setting for the client.
    */
   Client(
     rclcpp::node_interfaces::NodeBaseInterface * node_base,
     rclcpp::node_interfaces::NodeGraphInterface::SharedPtr node_graph,
     const std::string & service_name,
-    rcl_client_options_t & client_options)
+    rcl_client_options_t & client_options,
+    rclcpp::IntraProcessSetting ipc_setting)
   : ClientBase(node_base, node_graph)
   {
     using rosidl_typesupport_cpp::get_service_type_support_handle;
@@ -328,6 +357,37 @@ public:
           true);
       }
       rclcpp::exceptions::throw_from_rcl_error(ret, "could not create client");
+    }
+
+    // Setup intra process if requested.
+    if (ipc_setting == IntraProcessSetting::Enable) {
+      // Check if the QoS is compatible with intra-process.
+      auto qos_profile = get_response_subscription_actual_qos();
+
+      if (qos_profile.history() != rclcpp::HistoryPolicy::KeepLast) {
+        throw std::invalid_argument(
+                "intraprocess communication allowed only with keep last history qos policy");
+      }
+      if (qos_profile.depth() == 0) {
+        throw std::invalid_argument(
+                "intraprocess communication is not allowed with 0 depth qos policy");
+      }
+      if (qos_profile.durability() != rclcpp::DurabilityPolicy::Volatile) {
+        throw std::invalid_argument(
+                "intraprocess communication allowed only with volatile durability");
+      }
+
+      // Create a ClientIntraProcess which will be given to the intra-process manager.
+      client_intra_process_ = std::make_shared<ClientIntraProcessT>(
+        context_,
+        this->get_service_name(),
+        qos_profile);
+
+      // Add it to the intra process manager.
+      using rclcpp::experimental::IntraProcessManager;
+      auto ipm = context_->get_sub_context<IntraProcessManager>();
+      uint64_t intra_process_client_id = ipm->add_intra_process_client(client_intra_process_);
+      this->setup_intra_process(intra_process_client_id, ipm);
     }
   }
 
@@ -428,9 +488,30 @@ public:
   {
     std::lock_guard<std::mutex> lock(pending_requests_mutex_);
     int64_t sequence_number;
-    rcl_ret_t ret = rcl_send_request(get_client_handle().get(), request.get(), &sequence_number);
-    if (RCL_RET_OK != ret) {
-      rclcpp::exceptions::throw_from_rcl_error(ret, "failed to send request");
+    if (use_intra_process_) {
+      auto ipm = weak_ipm_.lock();
+      if (!ipm) {
+        throw std::runtime_error(
+                "intra process send called after destruction of intra process manager");
+      }
+      bool intra_process_server_available = ipm->service_is_available(intra_process_client_id_);
+
+      // Check if there's an intra-process server available matching this client.
+      // If there's not, we fall back into inter-process communication, since
+      // the server might be available in another process or was configured to not use IPC.
+      if (intra_process_server_available) {
+        // Send intra-process request
+        ipm->send_intra_process_client_request<ServiceT>(
+          intra_process_client_id_,
+          std::make_pair(std::move(request), std::move(value)));
+        ipc_sequence_number_++;
+        sequence_number = ipc_sequence_number_;
+      }
+    } else {
+        rcl_ret_t ret = rcl_send_request(get_client_handle().get(), request.get(), &sequence_number);
+        if (RCL_RET_OK != ret) {
+        rclcpp::exceptions::throw_from_rcl_error(ret, "failed to send request");
+        }
     }
 
     SharedPromise call_promise = std::make_shared<Promise>();
@@ -463,7 +544,6 @@ public:
       };
 
     async_send_request(request, wrapping_cb);
-
     return future_with_request;
   }
 
@@ -472,6 +552,11 @@ private:
 
   std::map<int64_t, std::tuple<SharedPromise, CallbackType, SharedFuture>> pending_requests_;
   std::mutex pending_requests_mutex_;
+
+private:
+  using ClientIntraProcessT = rclcpp::experimental::ClientIntraProcess<ServiceT>;
+  std::shared_ptr<ClientIntraProcessT> client_intra_process_;
+  std::atomic_uint ipc_sequence_number_{1};
 };
 
 }  // namespace rclcpp

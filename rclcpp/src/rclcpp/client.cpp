@@ -70,6 +70,18 @@ ClientBase::~ClientBase()
   clear_on_new_response_callback();
   // Make sure the client handle is destructed as early as possible and before the node handle
   client_handle_.reset();
+
+  if (!use_intra_process_) {
+    return;
+  }
+  auto ipm = weak_ipm_.lock();
+  if (!ipm) {
+    RCLCPP_WARN(
+      rclcpp::get_logger("rclcpp"),
+      "Intra process manager died before than a client.");
+    return;
+  }
+  ipm->remove_client(intra_process_client_id_);
 }
 
 bool
@@ -199,6 +211,35 @@ bool
 ClientBase::exchange_in_use_by_wait_set_state(bool in_use_state)
 {
   return in_use_by_wait_set_.exchange(in_use_state);
+}
+
+void
+ClientBase::setup_intra_process(
+  uint64_t intra_process_client_id,
+  IntraProcessManagerWeakPtr weak_ipm)
+{
+  weak_ipm_ = weak_ipm;
+  use_intra_process_ = true;
+  intra_process_client_id_ = intra_process_client_id;
+}
+
+rclcpp::Waitable::SharedPtr
+ClientBase::get_intra_process_waitable() const
+{
+  // If not using intra process, shortcut to nullptr.
+  if (!use_intra_process_) {
+    return nullptr;
+  }
+  // Get the intra process manager.
+  auto ipm = weak_ipm_.lock();
+  if (!ipm) {
+    throw std::runtime_error(
+            "ClientBase::get_intra_process_waitable() called "
+            "after destruction of intra process manager");
+  }
+
+  // Use the id to retrieve the intra-process client from the intra-process manager.
+  return ipm->get_client_intra_process(intra_process_client_id_);
 }
 
 void

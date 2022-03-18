@@ -239,7 +239,7 @@ public:
   using IntraProcessManagerWeakPtr =
     std::weak_ptr<rclcpp::experimental::IntraProcessManager>;
 
-  /// Implemenation detail.
+  /// Implementation detail.
   RCLCPP_PUBLIC
   void
   setup_intra_process(

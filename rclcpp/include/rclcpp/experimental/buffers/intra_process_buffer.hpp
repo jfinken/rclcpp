@@ -233,6 +233,54 @@ private:
   }
 };
 
+template<typename BufferT>
+class ServiceIntraProcessBuffer : public IntraProcessBufferBase
+{
+public:
+  RCLCPP_SMART_PTR_ALIASES_ONLY(ServiceIntraProcessBuffer)
+
+  virtual ~ServiceIntraProcessBuffer() {}
+
+  explicit
+  ServiceIntraProcessBuffer(
+    std::unique_ptr<BufferImplementationBase<BufferT>> buffer_impl)
+  {
+    buffer_ = std::move(buffer_impl);
+  }
+
+  // Not to be used in this class. Todo: review base class to avoid this.
+  bool use_take_shared_method() const override
+  {
+    throw std::runtime_error(
+            "use_take_shared_method not intended to be used in this class");
+    return false;
+  }
+
+  bool has_data() const override
+  {
+    return buffer_->has_data();
+  }
+
+  void clear() override
+  {
+    buffer_->clear();
+  }
+
+  void add(BufferT && msg)
+  {
+    buffer_->enqueue(std::move(msg));
+  }
+
+  BufferT
+  consume()
+  {
+    return buffer_->dequeue();
+  }
+
+private:
+  std::unique_ptr<BufferImplementationBase<BufferT>> buffer_;
+};
+
 }  // namespace buffers
 }  // namespace experimental
 }  // namespace rclcpp

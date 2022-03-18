@@ -36,6 +36,9 @@
 #include "rclcpp/detail/cpp_callback_trampoline.hpp"
 #include "rclcpp/exceptions.hpp"
 #include "rclcpp/expand_topic_or_service_name.hpp"
+#include "rclcpp/experimental/intra_process_manager.hpp"
+#include "rclcpp/experimental/service_intra_process.hpp"
+#include "rclcpp/intra_process_setting.hpp"
 #include "rclcpp/logging.hpp"
 #include "rclcpp/macros.hpp"
 #include "rclcpp/type_support_decl.hpp"
@@ -44,13 +47,19 @@
 namespace rclcpp
 {
 
+namespace node_interfaces
+{
+class NodeBaseInterface;
+}  // namespace node_interfaces
+
 class ServiceBase
 {
 public:
   RCLCPP_SMART_PTR_DEFINITIONS_NOT_COPYABLE(ServiceBase)
 
   RCLCPP_PUBLIC
-  explicit ServiceBase(std::shared_ptr<rcl_node_t> node_handle);
+  explicit ServiceBase(
+    std::shared_ptr<rclcpp::node_interfaces::NodeBaseInterface> node_base);
 
   RCLCPP_PUBLIC
   virtual ~ServiceBase();
@@ -125,6 +134,25 @@ public:
   RCLCPP_PUBLIC
   bool
   exchange_in_use_by_wait_set_state(bool in_use_state);
+
+  using IntraProcessManagerWeakPtr =
+    std::weak_ptr<rclcpp::experimental::IntraProcessManager>;
+
+  /// Implementation detail.
+  RCLCPP_PUBLIC
+  void
+  setup_intra_process(
+    uint64_t intra_process_service_id,
+    IntraProcessManagerWeakPtr weak_ipm);
+
+  /// Return the waitable for intra-process
+  /**
+   * \return the waitable sharedpointer for intra-process, or nullptr if intra-process is not setup.
+   * \throws std::runtime_error if the intra process manager is destroyed
+   */
+  RCLCPP_PUBLIC
+  rclcpp::Waitable::SharedPtr
+  get_intra_process_waitable() const;
 
   /// Set a callback to be called when each new request is received.
   /**
@@ -227,6 +255,7 @@ protected:
   set_on_new_request_callback(rcl_event_callback_t callback, const void * user_data);
 
   std::shared_ptr<rcl_node_t> node_handle_;
+  std::shared_ptr<rclcpp::Context> context_;
 
   std::shared_ptr<rcl_service_t> service_handle_;
   bool owns_rcl_handle_ = true;
@@ -236,6 +265,11 @@ protected:
   std::atomic<bool> in_use_by_wait_set_{false};
   
   std::recursive_mutex reentrant_mutex_;
+
+  bool use_intra_process_{false};
+  IntraProcessManagerWeakPtr weak_ipm_;
+  uint64_t intra_process_service_id_;
+
   std::function<void(size_t)> on_new_request_callback_{nullptr};
 };
 
@@ -265,13 +299,15 @@ public:
    * \param[in] service_name Name of the topic to publish to.
    * \param[in] any_callback User defined callback to call when a client request is received.
    * \param[in] service_options options for the subscription.
+   * \param[in] ipc_setting Intra-process communication setting for the service.
    */
   Service(
-    std::shared_ptr<rcl_node_t> node_handle,
+    std::shared_ptr<rclcpp::node_interfaces::NodeBaseInterface> node_base,
     const std::string & service_name,
     AnyServiceCallback<ServiceT> any_callback,
-    rcl_service_options_t & service_options)
-  : ServiceBase(node_handle), any_callback_(any_callback)
+    rcl_service_options_t & service_options,
+    rclcpp::IntraProcessSetting ipc_setting)
+  : ServiceBase(node_base), any_callback_(any_callback)
   {
     using rosidl_typesupport_cpp::get_service_type_support_handle;
     auto service_type_support_handle = get_service_type_support_handle<ServiceT>();
@@ -293,7 +329,7 @@ public:
 
     rcl_ret_t ret = rcl_service_init(
       service_handle_.get(),
-      node_handle.get(),
+      node_handle_.get(),
       service_type_support_handle,
       service_name.c_str(),
       &service_options);
@@ -318,6 +354,37 @@ public:
 #ifndef TRACETOOLS_DISABLED
     any_callback_.register_callback_for_tracing();
 #endif
+
+    // Setup intra process if requested.
+    if (ipc_setting == IntraProcessSetting::Enable) {
+      // Check if the QoS is compatible with intra-process.
+      auto qos_profile = get_request_subscription_actual_qos();
+
+      if (qos_profile.history() != rclcpp::HistoryPolicy::KeepLast) {
+        throw std::invalid_argument(
+                "intraprocess communication allowed only with keep last history qos policy");
+      }
+      if (qos_profile.depth() == 0) {
+        throw std::invalid_argument(
+                "intraprocess communication is not allowed with 0 depth qos policy");
+      }
+      if (qos_profile.durability() != rclcpp::DurabilityPolicy::Volatile) {
+        throw std::invalid_argument(
+                "intraprocess communication allowed only with volatile durability");
+      }
+
+      // Create a ServiceIntraProcess which will be given to the intra-process manager.
+      service_intra_process_ = std::make_shared<ServiceIntraProcessT>(
+        any_callback,
+        context_,
+        this->get_service_name(),
+        qos_profile);
+
+      using rclcpp::experimental::IntraProcessManager;
+      auto ipm = context_->get_sub_context<IntraProcessManager>();
+      uint64_t intra_process_service_id = ipm->add_intra_process_service(service_intra_process_);
+      this->setup_intra_process(intra_process_service_id, ipm);
+    }
   }
 
   /// Default constructor.
@@ -331,10 +398,10 @@ public:
    * \param[in] any_callback User defined callback to call when a client request is received.
    */
   Service(
-    std::shared_ptr<rcl_node_t> node_handle,
+    std::shared_ptr<rclcpp::node_interfaces::NodeBaseInterface> node_base,
     std::shared_ptr<rcl_service_t> service_handle,
     AnyServiceCallback<ServiceT> any_callback)
-  : ServiceBase(node_handle),
+  : ServiceBase(node_base),
     any_callback_(any_callback)
   {
     // check if service handle was initialized
@@ -366,10 +433,10 @@ public:
    * \param[in] any_callback User defined callback to call when a client request is received.
    */
   Service(
-    std::shared_ptr<rcl_node_t> node_handle,
+    std::shared_ptr<rclcpp::node_interfaces::NodeBaseInterface> node_base,
     rcl_service_t * service_handle,
     AnyServiceCallback<ServiceT> any_callback)
-  : ServiceBase(node_handle),
+  : ServiceBase(node_base),
     any_callback_(any_callback)
   {
     // check if service handle was initialized
@@ -453,6 +520,9 @@ private:
   RCLCPP_DISABLE_COPY(Service)
 
   AnyServiceCallback<ServiceT> any_callback_;
+
+  using ServiceIntraProcessT = rclcpp::experimental::ServiceIntraProcess<ServiceT>;
+  std::shared_ptr<ServiceIntraProcessT> service_intra_process_;
 };
 
 }  // namespace rclcpp
