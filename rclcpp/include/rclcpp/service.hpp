@@ -357,33 +357,7 @@ public:
 
     // Setup intra process if requested.
     if (ipc_setting == IntraProcessSetting::Enable) {
-      // Check if the QoS is compatible with intra-process.
-      auto qos_profile = get_request_subscription_actual_qos();
-
-      if (qos_profile.history() != rclcpp::HistoryPolicy::KeepLast) {
-        throw std::invalid_argument(
-                "intraprocess communication allowed only with keep last history qos policy");
-      }
-      if (qos_profile.depth() == 0) {
-        throw std::invalid_argument(
-                "intraprocess communication is not allowed with 0 depth qos policy");
-      }
-      if (qos_profile.durability() != rclcpp::DurabilityPolicy::Volatile) {
-        throw std::invalid_argument(
-                "intraprocess communication allowed only with volatile durability");
-      }
-
-      // Create a ServiceIntraProcess which will be given to the intra-process manager.
-      service_intra_process_ = std::make_shared<ServiceIntraProcessT>(
-        any_callback,
-        context_,
-        this->get_service_name(),
-        qos_profile);
-
-      using rclcpp::experimental::IntraProcessManager;
-      auto ipm = context_->get_sub_context<IntraProcessManager>();
-      uint64_t intra_process_service_id = ipm->add_intra_process_service(service_intra_process_);
-      this->setup_intra_process(intra_process_service_id, ipm);
+      create_intra_process_service();
     }
   }
 
@@ -435,7 +409,8 @@ public:
   Service(
     std::shared_ptr<rclcpp::node_interfaces::NodeBaseInterface> node_base,
     rcl_service_t * service_handle,
-    AnyServiceCallback<ServiceT> any_callback)
+    AnyServiceCallback<ServiceT> any_callback,
+    rclcpp::IntraProcessSetting ipc_setting)
   : ServiceBase(node_base),
     any_callback_(any_callback)
   {
@@ -457,6 +432,10 @@ public:
 #ifndef TRACETOOLS_DISABLED
     any_callback_.register_callback_for_tracing();
 #endif
+    // Setup intra process if requested.
+    if (ipc_setting == IntraProcessSetting::Enable) {
+      create_intra_process_service();
+    }
   }
 
   Service() = delete;
@@ -514,6 +493,38 @@ public:
     if (ret != RCL_RET_OK) {
       rclcpp::exceptions::throw_from_rcl_error(ret, "failed to send response");
     }
+  }
+
+  void
+  create_intra_process_service()
+  {
+    // Check if the QoS is compatible with intra-process.
+    auto qos_profile = get_request_subscription_actual_qos();
+
+    if (qos_profile.history() != rclcpp::HistoryPolicy::KeepLast) {
+      throw std::invalid_argument(
+              "intraprocess communication allowed only with keep last history qos policy");
+    }
+    if (qos_profile.depth() == 0) {
+      throw std::invalid_argument(
+              "intraprocess communication is not allowed with 0 depth qos policy");
+    }
+    if (qos_profile.durability() != rclcpp::DurabilityPolicy::Volatile) {
+      throw std::invalid_argument(
+              "intraprocess communication allowed only with volatile durability");
+    }
+
+    // Create a ServiceIntraProcess which will be given to the intra-process manager.
+    service_intra_process_ = std::make_shared<ServiceIntraProcessT>(
+      any_callback_,
+      context_,
+      this->get_service_name(),
+      qos_profile);
+
+    using rclcpp::experimental::IntraProcessManager;
+    auto ipm = context_->get_sub_context<IntraProcessManager>();
+    uint64_t intra_process_service_id = ipm->add_intra_process_service(service_intra_process_);
+    this->setup_intra_process(intra_process_service_id, ipm);
   }
 
 private:
