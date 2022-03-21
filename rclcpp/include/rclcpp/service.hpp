@@ -356,6 +356,11 @@ public:
 #endif
 
     // Setup intra process if requested.
+    if (ipc_setting == IntraProcessSetting::NodeDefault) {
+      if(node_base->get_use_intra_process_default()) {
+        ipc_setting = IntraProcessSetting::Enable;
+      }
+    }
     if (ipc_setting == IntraProcessSetting::Enable) {
       create_intra_process_service();
     }

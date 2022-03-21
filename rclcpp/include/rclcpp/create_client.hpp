@@ -36,7 +36,7 @@ create_client(
   const std::string & service_name,
   const rmw_qos_profile_t & qos_profile,
   rclcpp::CallbackGroup::SharedPtr group,
-  rclcpp::IntraProcessSetting ipc_setting = rclcpp::IntraProcessSetting::Disable)
+  rclcpp::IntraProcessSetting ipc_setting = rclcpp::IntraProcessSetting::NodeDefault)
 {
   rcl_client_options_t options = rcl_client_get_default_options();
   options.qos = qos_profile;

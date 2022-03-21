@@ -38,7 +38,7 @@ create_service(
   CallbackT && callback,
   const rmw_qos_profile_t & qos_profile,
   rclcpp::CallbackGroup::SharedPtr group,
-  rclcpp::IntraProcessSetting ipc_setting = rclcpp::IntraProcessSetting::Disable)
+  rclcpp::IntraProcessSetting ipc_setting = rclcpp::IntraProcessSetting::NodeDefault)
 {
   rclcpp::AnyServiceCallback<ServiceT> any_service_callback;
   any_service_callback.set(std::forward<CallbackT>(callback));
