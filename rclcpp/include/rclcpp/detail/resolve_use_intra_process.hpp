@@ -49,6 +49,29 @@ resolve_use_intra_process(const OptionsT & options, const NodeBaseT & node_base)
   return use_intra_process;
 }
 
+/// Return whether or not intra process is enabled, resolving "NodeDefault" if needed.
+template<typename NodeBaseT>
+bool
+resolve_use_intra_process(const IntraProcessSetting & ipc_setting, const NodeBaseT & node_base)
+{
+  bool use_intra_process;
+  switch (ipc_setting) {
+    case IntraProcessSetting::Enable:
+      use_intra_process = true;
+      break;
+    case IntraProcessSetting::Disable:
+      use_intra_process = false;
+      break;
+    case IntraProcessSetting::NodeDefault:
+      use_intra_process = node_base.get_use_intra_process_default();
+      break;
+    default:
+      throw std::runtime_error("Unrecognized IntraProcessSetting value");
+      break;
+  }
+
+  return use_intra_process;
+}
 }  // namespace detail
 
 }  // namespace rclcpp

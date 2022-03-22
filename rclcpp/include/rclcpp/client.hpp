@@ -30,6 +30,7 @@
 #include "rcl/wait.h"
 
 #include "rclcpp/detail/cpp_callback_trampoline.hpp"
+#include "rclcpp/detail/resolve_use_intra_process.hpp"
 #include "rclcpp/exceptions.hpp"
 #include "rclcpp/expand_topic_or_service_name.hpp"
 #include "rclcpp/experimental/client_intra_process.hpp"
@@ -359,14 +360,7 @@ public:
       rclcpp::exceptions::throw_from_rcl_error(ret, "could not create client");
     }
 
-    // Setup intra process if requested.
-    if (ipc_setting == IntraProcessSetting::NodeDefault) {
-      if (node_base->get_use_intra_process_default()) {
-        ipc_setting = IntraProcessSetting::Enable;
-      }
-    }
-
-    if (ipc_setting == IntraProcessSetting::Enable) {
+    if (rclcpp::detail::resolve_use_intra_process(ipc_setting, *node_base)) {
       create_intra_process_client();
     }
   }

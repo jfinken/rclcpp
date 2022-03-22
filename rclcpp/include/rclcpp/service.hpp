@@ -34,6 +34,7 @@
 
 #include "rclcpp/any_service_callback.hpp"
 #include "rclcpp/detail/cpp_callback_trampoline.hpp"
+#include "rclcpp/detail/resolve_use_intra_process.hpp"
 #include "rclcpp/exceptions.hpp"
 #include "rclcpp/expand_topic_or_service_name.hpp"
 #include "rclcpp/experimental/intra_process_manager.hpp"
@@ -356,12 +357,7 @@ public:
 #endif
 
     // Setup intra process if requested.
-    if (ipc_setting == IntraProcessSetting::NodeDefault) {
-      if(node_base->get_use_intra_process_default()) {
-        ipc_setting = IntraProcessSetting::Enable;
-      }
-    }
-    if (ipc_setting == IntraProcessSetting::Enable) {
+    if (rclcpp::detail::resolve_use_intra_process(ipc_setting, *node_base)) {
       create_intra_process_service();
     }
   }
