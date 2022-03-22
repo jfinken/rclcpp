@@ -360,6 +360,7 @@ public:
       rclcpp::exceptions::throw_from_rcl_error(ret, "could not create client");
     }
 
+    // Setup intra process if requested.
     if (rclcpp::detail::resolve_use_intra_process(ipc_setting, *node_base)) {
       create_intra_process_client();
     }

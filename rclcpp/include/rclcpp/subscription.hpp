@@ -151,7 +151,7 @@ public:
     }
 
     // Setup intra process publishing if requested.
-    if (rclcpp::detail::resolve_use_intra_process(options, *node_base)) {
+    if (rclcpp::detail::resolve_use_intra_process(options_.use_intra_process_comm, *node_base)) {
       using rclcpp::detail::resolve_intra_process_buffer_type;
 
       // Check if the QoS is compatible with intra-process.
