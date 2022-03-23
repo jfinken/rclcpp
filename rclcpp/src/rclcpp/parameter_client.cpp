@@ -48,13 +48,6 @@ AsyncParametersClient::AsyncParametersClient(
   rcl_client_options_t options = rcl_client_get_default_options();
   options.qos = qos_profile;
 
-  rclcpp::IntraProcessSetting ipc_setting;
-  if (node_base_interface->get_use_intra_process_default()) {
-    ipc_setting = rclcpp::IntraProcessSetting::Enable;
-  } else {
-    ipc_setting = rclcpp::IntraProcessSetting::Disable;
-  }
-
   using rclcpp::Client;
   using rclcpp::ClientBase;
 
@@ -62,8 +55,7 @@ AsyncParametersClient::AsyncParametersClient(
     node_base_interface.get(),
     node_graph_interface,
     remote_node_name_ + "/" + parameter_service_names::get_parameters,
-    options,
-    ipc_setting);
+    options);
   auto get_parameters_base = std::dynamic_pointer_cast<ClientBase>(get_parameters_client_);
   node_services_interface->add_client(get_parameters_base, group);
 
@@ -71,8 +63,7 @@ AsyncParametersClient::AsyncParametersClient(
     node_base_interface.get(),
     node_graph_interface,
     remote_node_name_ + "/" + parameter_service_names::get_parameter_types,
-    options,
-    ipc_setting);
+    options);
   auto get_parameter_types_base =
     std::dynamic_pointer_cast<ClientBase>(get_parameter_types_client_);
   node_services_interface->add_client(get_parameter_types_base, group);
@@ -81,8 +72,7 @@ AsyncParametersClient::AsyncParametersClient(
     node_base_interface.get(),
     node_graph_interface,
     remote_node_name_ + "/" + parameter_service_names::set_parameters,
-    options,
-    ipc_setting);
+    options);
   auto set_parameters_base = std::dynamic_pointer_cast<ClientBase>(set_parameters_client_);
   node_services_interface->add_client(set_parameters_base, group);
 
@@ -91,8 +81,7 @@ AsyncParametersClient::AsyncParametersClient(
     node_base_interface.get(),
     node_graph_interface,
     remote_node_name_ + "/" + parameter_service_names::set_parameters_atomically,
-    options,
-    ipc_setting);
+    options);
   auto set_parameters_atomically_base = std::dynamic_pointer_cast<ClientBase>(
     set_parameters_atomically_client_);
   node_services_interface->add_client(set_parameters_atomically_base, group);
@@ -101,8 +90,7 @@ AsyncParametersClient::AsyncParametersClient(
     node_base_interface.get(),
     node_graph_interface,
     remote_node_name_ + "/" + parameter_service_names::list_parameters,
-    options,
-    ipc_setting);
+    options);
   auto list_parameters_base = std::dynamic_pointer_cast<ClientBase>(list_parameters_client_);
   node_services_interface->add_client(list_parameters_base, group);
 
@@ -110,8 +98,7 @@ AsyncParametersClient::AsyncParametersClient(
     node_base_interface.get(),
     node_graph_interface,
     remote_node_name_ + "/" + parameter_service_names::describe_parameters,
-    options,
-    ipc_setting);
+    options);
   auto describe_parameters_base =
     std::dynamic_pointer_cast<ClientBase>(describe_parameters_client_);
   node_services_interface->add_client(describe_parameters_base, group);

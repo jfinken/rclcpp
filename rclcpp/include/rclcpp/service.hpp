@@ -307,7 +307,7 @@ public:
     const std::string & service_name,
     AnyServiceCallback<ServiceT> any_callback,
     rcl_service_options_t & service_options,
-    rclcpp::IntraProcessSetting ipc_setting)
+    rclcpp::IntraProcessSetting ipc_setting = rclcpp::IntraProcessSetting::NodeDefault)
   : ServiceBase(node_base), any_callback_(any_callback)
   {
     using rosidl_typesupport_cpp::get_service_type_support_handle;
@@ -411,7 +411,7 @@ public:
     std::shared_ptr<rclcpp::node_interfaces::NodeBaseInterface> node_base,
     rcl_service_t * service_handle,
     AnyServiceCallback<ServiceT> any_callback,
-    rclcpp::IntraProcessSetting ipc_setting)
+    rclcpp::IntraProcessSetting ipc_setting = rclcpp::IntraProcessSetting::NodeDefault)
   : ServiceBase(node_base),
     any_callback_(any_callback)
   {
@@ -434,7 +434,7 @@ public:
     any_callback_.register_callback_for_tracing();
 #endif
     // Setup intra process if requested.
-    if (ipc_setting == IntraProcessSetting::Enable) {
+    if (rclcpp::detail::resolve_use_intra_process(ipc_setting, *node_base)) {
       create_intra_process_service();
     }
   }

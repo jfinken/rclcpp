@@ -334,7 +334,7 @@ public:
     rclcpp::node_interfaces::NodeGraphInterface::SharedPtr node_graph,
     const std::string & service_name,
     rcl_client_options_t & client_options,
-    rclcpp::IntraProcessSetting ipc_setting)
+    rclcpp::IntraProcessSetting ipc_setting = rclcpp::IntraProcessSetting::NodeDefault)
   : ClientBase(node_base, node_graph)
   {
     using rosidl_typesupport_cpp::get_service_type_support_handle;

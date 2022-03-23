@@ -17,11 +17,10 @@
 #include <string>
 #include <memory>
 
-#include "rclcpp/any_service_callback.hpp"
-#include "rclcpp/intra_process_setting.hpp"
 #include "rclcpp/node.hpp"
-#include "rclcpp/rclcpp.hpp"
+#include "rclcpp/any_service_callback.hpp"
 #include "rclcpp/service.hpp"
+#include "rclcpp/rclcpp.hpp"
 
 #include "rcl/service.h"
 
@@ -63,21 +62,12 @@ TEST_F(TestExternallyDefinedServices, extern_defined_uninitialized) {
 
   rclcpp::AnyServiceCallback<test_msgs::srv::Empty> cb;
 
-  auto node_base_interface = node_handle->get_node_base_interface();
-
-  rclcpp::IntraProcessSetting ipc_setting;
-  if (node_base_interface->get_use_intra_process_default()) {
-    ipc_setting = rclcpp::IntraProcessSetting::Enable;
-  } else {
-    ipc_setting = rclcpp::IntraProcessSetting::Disable;
-  }
-
   // don't initialize the service
   // expect fail
   try {
     rclcpp::Service<test_msgs::srv::Empty>(
-      node_base_interface,
-      &service_handle, cb, ipc_setting);
+      node_handle->get_node_base_interface(),
+      &service_handle, cb);
   } catch (const std::runtime_error &) {
     SUCCEED();
     return;
@@ -105,19 +95,10 @@ TEST_F(TestExternallyDefinedServices, extern_defined_initialized) {
 
   rclcpp::AnyServiceCallback<test_msgs::srv::Empty> cb;
 
-  auto node_base_interface = node_handle->get_node_base_interface();
-
-  rclcpp::IntraProcessSetting ipc_setting;
-  if (node_base_interface->get_use_intra_process_default()) {
-    ipc_setting = rclcpp::IntraProcessSetting::Enable;
-  } else {
-    ipc_setting = rclcpp::IntraProcessSetting::Disable;
-  }
-
   try {
     rclcpp::Service<test_msgs::srv::Empty>(
-      node_base_interface,
-      &service_handle, cb, ipc_setting);
+      node_handle->get_node_base_interface(),
+      &service_handle, cb);
   } catch (const std::runtime_error &) {
     FAIL();
     return;
@@ -143,12 +124,9 @@ TEST_F(TestExternallyDefinedServices, extern_defined_destructor) {
   rcl_service_options_t service_options = rcl_service_get_default_options();
   const rosidl_service_type_support_t * ts =
     rosidl_typesupport_cpp::get_service_type_support_handle<test_msgs::srv::Empty>();
-
-  auto node_base_interface = node_handle->get_node_base_interface();
-
   rcl_ret_t ret = rcl_service_init(
     &service_handle,
-    node_base_interface->get_rcl_node_handle(),
+    node_handle->get_node_base_interface()->get_rcl_node_handle(),
     ts, "base_node_service", &service_options);
   if (ret != RCL_RET_OK) {
     FAIL();
@@ -156,18 +134,11 @@ TEST_F(TestExternallyDefinedServices, extern_defined_destructor) {
   }
   rclcpp::AnyServiceCallback<test_msgs::srv::Empty> cb;
 
-  rclcpp::IntraProcessSetting ipc_setting;
-  if (node_base_interface->get_use_intra_process_default()) {
-    ipc_setting = rclcpp::IntraProcessSetting::Enable;
-  } else {
-    ipc_setting = rclcpp::IntraProcessSetting::Disable;
-  }
-
   {
     // Call constructor
     rclcpp::Service<test_msgs::srv::Empty> srv_cpp(
-      node_base_interface,
-      &service_handle, cb, ipc_setting);
+      node_handle->get_node_base_interface(),
+      &service_handle, cb);
     // Call destructor
   }
 
