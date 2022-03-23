@@ -60,7 +60,7 @@ public:
     CallbackTypeValueVariant,
     CallbackWithRequestTypeValueVariant>;
 
-  using ClientResponse = std::pair<SharedResponse, CallbackInfoVariant>;
+  using ServiceResponse = std::pair<SharedResponse, CallbackInfoVariant>;
 
   ClientIntraProcess(
     rclcpp::Context::SharedPtr context,
@@ -70,7 +70,7 @@ public:
   {
     // Create the intra-process buffer.
     buffer_ = rclcpp::experimental::create_service_intra_process_buffer<
-      ClientResponse>(qos_profile);
+      ServiceResponse>(qos_profile);
   }
 
   virtual ~ClientIntraProcess() = default;
@@ -83,7 +83,7 @@ public:
   }
 
   void
-  store_intra_process_response(ClientResponse && response)
+  store_intra_process_response(ServiceResponse && response)
   {
     buffer_->add(std::move(response));
     gc_.trigger();
@@ -92,7 +92,7 @@ public:
   std::shared_ptr<void>
   take_data() override
   {
-    auto data = std::make_shared<ClientResponse>(std::move(buffer_->consume()));
+    auto data = std::make_shared<ServiceResponse>(std::move(buffer_->consume()));
     return std::static_pointer_cast<void>(data);
   }
 
@@ -102,7 +102,7 @@ public:
       throw std::runtime_error("'data' is empty");
     }
 
-    auto data_ptr = std::static_pointer_cast<ClientResponse>(data);
+    auto data_ptr = std::static_pointer_cast<ServiceResponse>(data);
     auto & typed_response = data_ptr->first;
     auto & value = data_ptr->second;
 
@@ -130,7 +130,7 @@ public:
 protected:
   using BufferUniquePtr =
     typename rclcpp::experimental::buffers::ServiceIntraProcessBuffer<
-    ClientResponse>::UniquePtr;
+    ServiceResponse>::UniquePtr;
 
   BufferUniquePtr buffer_;
 };
