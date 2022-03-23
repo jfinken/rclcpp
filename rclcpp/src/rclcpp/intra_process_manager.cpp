@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "rclcpp/experimental/intra_process_manager.hpp"
+
 #include <atomic>
 #include <memory>
 #include <mutex>
-
-#include "rclcpp/experimental/intra_process_manager.hpp"
 
 namespace rclcpp
 {
