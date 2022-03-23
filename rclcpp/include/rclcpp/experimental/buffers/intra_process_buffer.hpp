@@ -248,11 +248,8 @@ public:
     buffer_ = std::move(buffer_impl);
   }
 
-  // Not to be used in this class. Todo: review base class to avoid this.
   bool use_take_shared_method() const override
   {
-    throw std::runtime_error(
-            "use_take_shared_method not intended to be used in this class");
     return false;
   }
 
