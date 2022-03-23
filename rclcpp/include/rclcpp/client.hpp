@@ -280,6 +280,16 @@ protected:
   void
   set_on_new_response_callback(rcl_event_callback_t callback, const void * user_data);
 
+  using IntraProcessManagerWeakPtr =
+    std::weak_ptr<rclcpp::experimental::IntraProcessManager>;
+
+  /// Implementation detail.
+  RCLCPP_PUBLIC
+  void
+  setup_intra_process(
+    uint64_t intra_process_client_id,
+    IntraProcessManagerWeakPtr weak_ipm);
+
   rclcpp::node_interfaces::NodeGraphInterface::WeakPtr node_graph_;
   std::shared_ptr<rcl_node_t> node_handle_;
   std::shared_ptr<rclcpp::Context> context_;
