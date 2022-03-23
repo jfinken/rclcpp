@@ -28,7 +28,7 @@ namespace detail
 /// Return whether or not intra process is enabled, resolving "NodeDefault" if needed.
 template<typename NodeBaseT>
 bool
-resolve_use_intra_process(const IntraProcessSetting & ipc_setting, const NodeBaseT & node_base)
+resolve_use_intra_process(IntraProcessSetting ipc_setting, const NodeBaseT & node_base)
 {
   bool use_intra_process;
   switch (ipc_setting) {
