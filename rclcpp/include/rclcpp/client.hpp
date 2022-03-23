@@ -290,6 +290,9 @@ protected:
     uint64_t intra_process_client_id,
     IntraProcessManagerWeakPtr weak_ipm);
 
+  std::shared_ptr<rclcpp::experimental::ClientIntraProcessBase> client_intra_process_;
+  std::atomic_uint ipc_sequence_number_{1};
+
   rclcpp::node_interfaces::NodeGraphInterface::WeakPtr node_graph_;
   std::shared_ptr<rcl_node_t> node_handle_;
   std::shared_ptr<rclcpp::Context> context_;
@@ -552,6 +555,8 @@ public:
     }
 
     // Create a ClientIntraProcess which will be given to the intra-process manager.
+    using ClientIntraProcessT = rclcpp::experimental::ClientIntraProcess<ServiceT>;
+
     client_intra_process_ = std::make_shared<ClientIntraProcessT>(
       context_,
       this->get_service_name(),
@@ -568,11 +573,6 @@ public:
 
   std::map<int64_t, std::tuple<SharedPromise, CallbackType, SharedFuture>> pending_requests_;
   std::mutex pending_requests_mutex_;
-
-private:
-  using ClientIntraProcessT = rclcpp::experimental::ClientIntraProcess<ServiceT>;
-  std::shared_ptr<ClientIntraProcessT> client_intra_process_;
-  std::atomic_uint ipc_sequence_number_{1};
 };
 
 }  // namespace rclcpp
