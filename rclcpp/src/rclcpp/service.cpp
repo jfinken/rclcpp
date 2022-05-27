@@ -39,6 +39,7 @@ ServiceBase::~ServiceBase()
 {
   clear_on_new_request_callback();
 
+  std::lock_guard<std::recursive_mutex> lock(ipc_mutex_);
   if (!use_intra_process_) {
     return;
   }
@@ -108,14 +109,16 @@ ServiceBase::setup_intra_process(
   uint64_t intra_process_service_id,
   IntraProcessManagerWeakPtr weak_ipm)
 {
+  std::lock_guard<std::recursive_mutex> lock(ipc_mutex_);
   intra_process_service_id_ = intra_process_service_id;
   weak_ipm_ = weak_ipm;
   use_intra_process_ = true;
 }
 
 rclcpp::Waitable::SharedPtr
-ServiceBase::get_intra_process_waitable() const
+ServiceBase::get_intra_process_waitable()
 {
+  std::lock_guard<std::recursive_mutex> lock(ipc_mutex_);
   // If not using intra process, shortcut to nullptr.
   if (!use_intra_process_) {
     return nullptr;

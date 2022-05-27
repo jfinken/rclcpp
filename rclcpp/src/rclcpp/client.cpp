@@ -71,6 +71,7 @@ ClientBase::~ClientBase()
   // Make sure the client handle is destructed as early as possible and before the node handle
   client_handle_.reset();
 
+  std::lock_guard<std::recursive_mutex> lock(ipc_mutex_);
   if (!use_intra_process_) {
     return;
   }
@@ -218,14 +219,16 @@ ClientBase::setup_intra_process(
   uint64_t intra_process_client_id,
   IntraProcessManagerWeakPtr weak_ipm)
 {
+  std::lock_guard<std::recursive_mutex> lock(ipc_mutex_);
   weak_ipm_ = weak_ipm;
   use_intra_process_ = true;
   intra_process_client_id_ = intra_process_client_id;
 }
 
 rclcpp::Waitable::SharedPtr
-ClientBase::get_intra_process_waitable() const
+ClientBase::get_intra_process_waitable()
 {
+  std::lock_guard<std::recursive_mutex> lock(ipc_mutex_);
   // If not using intra process, shortcut to nullptr.
   if (!use_intra_process_) {
     return nullptr;
