@@ -50,7 +50,7 @@ public:
   get_number_of_ready_guard_conditions() {return 1;}
 
   RCLCPP_PUBLIC
-  void
+  bool
   add_to_wait_set(rcl_wait_set_t * wait_set);
 
   virtual bool

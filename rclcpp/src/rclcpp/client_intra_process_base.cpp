@@ -17,10 +17,11 @@
 
 using rclcpp::experimental::ClientIntraProcessBase;
 
-void
+bool
 ClientIntraProcessBase::add_to_wait_set(rcl_wait_set_t * wait_set)
 {
   detail::add_guard_condition_to_rcl_wait_set(*wait_set, gc_);
+  return true;
 }
 
 const char *
