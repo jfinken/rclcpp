@@ -73,8 +73,8 @@ public:
     AnyServiceCallback<ServiceT> callback,
     rclcpp::Context::SharedPtr context,
     const std::string & service_name,
-    const rclcpp::QoS & qos_profile)
-  : ServiceIntraProcessBase(context, service_name, qos_profile), any_callback_(callback)
+    const rmw_qos_profile_t & qos_profile)
+  : ServiceIntraProcessBase(context, service_name), any_callback_(callback)
   {
     // Create the intra-process buffer.
     buffer_ = rclcpp::experimental::create_service_intra_process_buffer<

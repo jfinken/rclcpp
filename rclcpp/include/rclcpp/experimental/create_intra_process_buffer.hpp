@@ -95,11 +95,11 @@ create_intra_process_buffer(
 
 template<typename BufferT>
 typename rclcpp::experimental::buffers::ServiceIntraProcessBuffer<BufferT>::UniquePtr
-create_service_intra_process_buffer(const rclcpp::QoS & qos)
+create_service_intra_process_buffer(const rmw_qos_profile_t & qos)
 {
   using rclcpp::experimental::buffers::RingBufferImplementation;
 
-  size_t buffer_size = qos.depth();
+  size_t buffer_size = qos.depth;
   auto buffer_impl = std::make_unique<RingBufferImplementation<BufferT>>(buffer_size);
 
   using rclcpp::experimental::buffers::ServiceIntraProcessBuffer;

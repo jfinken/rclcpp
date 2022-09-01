@@ -43,9 +43,8 @@ public:
   RCLCPP_PUBLIC
   ServiceIntraProcessBase(
     rclcpp::Context::SharedPtr context,
-    const std::string & service_name,
-    const rclcpp::QoS & qos_profile)
-  : gc_(context), service_name_(service_name), qos_profile_(qos_profile)
+    const std::string & service_name)
+  : gc_(context), service_name_(service_name)
   {}
 
   virtual ~ServiceIntraProcessBase() = default;
@@ -73,10 +72,6 @@ public:
   get_service_name() const;
 
   RCLCPP_PUBLIC
-  QoS
-  get_actual_qos() const;
-
-  RCLCPP_PUBLIC
   void
   add_intra_process_client(
     rclcpp::experimental::ClientIntraProcessBase::SharedPtr client,
@@ -93,7 +88,6 @@ protected:
 
 private:
   std::string service_name_;
-  QoS qos_profile_;
 };
 
 }  // namespace experimental

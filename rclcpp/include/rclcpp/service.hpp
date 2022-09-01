@@ -512,22 +512,6 @@ public:
   void
   create_intra_process_service()
   {
-    // Check if the QoS is compatible with intra-process.
-    auto qos_profile = get_request_subscription_actual_qos();
-
-    if (qos_profile.history() != rclcpp::HistoryPolicy::KeepLast) {
-      throw std::invalid_argument(
-              "intraprocess communication allowed only with keep last history qos policy");
-    }
-    if (qos_profile.depth() == 0) {
-      throw std::invalid_argument(
-              "intraprocess communication is not allowed with 0 depth qos policy");
-    }
-    if (qos_profile.durability() != rclcpp::DurabilityPolicy::Volatile) {
-      throw std::invalid_argument(
-              "intraprocess communication allowed only with volatile durability");
-    }
-
     // Create a ServiceIntraProcess which will be given to the intra-process manager.
     using ServiceIntraProcessT = rclcpp::experimental::ServiceIntraProcess<ServiceT>;
 
@@ -535,7 +519,7 @@ public:
       any_callback_,
       context_,
       this->get_service_name(),
-      qos_profile);
+      rmw_qos_profile_services_default);
 
     using rclcpp::experimental::IntraProcessManager;
     auto ipm = context_->get_sub_context<IntraProcessManager>();

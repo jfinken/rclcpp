@@ -38,9 +38,8 @@ public:
   RCLCPP_PUBLIC
   ClientIntraProcessBase(
     rclcpp::Context::SharedPtr context,
-    const std::string & service_name,
-    const rclcpp::QoS & qos_profile)
-  : gc_(context), service_name_(service_name), qos_profile_(qos_profile)
+    const std::string & service_name)
+  : gc_(context), service_name_(service_name)
   {}
 
   virtual ~ClientIntraProcessBase() = default;
@@ -67,17 +66,12 @@ public:
   const char *
   get_service_name() const;
 
-  RCLCPP_PUBLIC
-  QoS
-  get_actual_qos() const;
-
 protected:
   std::recursive_mutex reentrant_mutex_;
   rclcpp::GuardCondition gc_;
 
 private:
   std::string service_name_;
-  QoS qos_profile_;
 };
 
 }  // namespace experimental
