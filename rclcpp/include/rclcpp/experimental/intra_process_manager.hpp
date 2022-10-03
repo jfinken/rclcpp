@@ -367,9 +367,9 @@ public:
     if (service_it == services_.end()) {
       auto cli = get_client_intra_process(intra_process_client_id);
       auto warning_msg =
-       "There are no services to receive the intra-process request. "
-       "Do Inter process.\n"
-       "Client topic name: " + std::string(cli->get_service_name());
+        "Intra-process service gone out of scope. "
+        "Do inter-process requests.\n"
+        "Client service name: " + std::string(cli->get_service_name());
       RCLCPP_WARN(rclcpp::get_logger("rclcpp"), warning_msg.c_str());
       return;
     }
