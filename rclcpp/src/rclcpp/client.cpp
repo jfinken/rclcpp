@@ -120,9 +120,61 @@ ClientBase::service_is_ready() const
 }
 
 bool
+ClientBase::wait_for_intra_process_service_nanoseconds(std::chrono::nanoseconds timeout)
+{
+  auto ipm = weak_ipm_.lock();
+  if (!ipm) {
+    throw std::runtime_error(
+            "wait for intra process service called "
+            "after destruction of intra process manager");
+  }
+
+  auto start = std::chrono::steady_clock::now();
+
+  std::chrono::nanoseconds time_to_wait =
+    timeout > std::chrono::nanoseconds(0) ?
+    timeout - (std::chrono::steady_clock::now() - start) :
+    std::chrono::nanoseconds::max();
+
+  if (time_to_wait < std::chrono::nanoseconds(0)) {
+    // Do not allow the time_to_wait to become negative when timeout was originally positive.
+    // Setting time_to_wait to 0 will allow one non-blocking wait because of the do-while.
+    time_to_wait = std::chrono::nanoseconds(0);
+  }
+
+  do {
+    if (!rclcpp::ok(this->context_)) {
+      return false;
+    }
+    if (ipm->service_is_available(intra_process_client_id_)) {
+      return true;
+    }
+    // server is not ready, loop if there is time left
+    if (timeout > std::chrono::nanoseconds(0)) {
+      time_to_wait = timeout - (std::chrono::steady_clock::now() - start);
+    }
+
+    // Sleep some time to avoid max out CPU
+    auto sleep_time = std::min(time_to_wait, std::chrono::nanoseconds(RCL_MS_TO_NS(100)));
+    std::this_thread::sleep_for(sleep_time);
+  } while (time_to_wait > std::chrono::nanoseconds(0));
+  return false;
+}
+
+bool
 ClientBase::wait_for_service_nanoseconds(std::chrono::nanoseconds timeout)
 {
   auto start = std::chrono::steady_clock::now();
+
+  std::lock_guard<std::recursive_mutex> lock(ipc_mutex_);
+  if (use_intra_process_) {
+    // Look first for intra-process services until timeout
+    bool service_available = wait_for_intra_process_service_nanoseconds(timeout);
+    if (service_available) {
+      return true;
+    }
+  }
+
   // make an event to reuse, rather than create a new one each time
   auto node_ptr = node_graph_.lock();
   if (!node_ptr) {
