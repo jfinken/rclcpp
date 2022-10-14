@@ -130,10 +130,6 @@ ServerBase::ServerBase(
   }
 }
 
-ServerBase::~ServerBase()
-{
-}
-
 size_t
 ServerBase::get_number_of_ready_subscriptions()
 {

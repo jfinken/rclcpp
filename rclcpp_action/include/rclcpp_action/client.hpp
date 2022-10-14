@@ -69,7 +69,7 @@ class ClientBase : public rclcpp::Waitable
 {
 public:
   RCLCPP_ACTION_PUBLIC
-  virtual ~ClientBase();
+  virtual ~ClientBase() = default;
 
   /// Enum to identify entities belonging to the action client
   enum class EntityType : std::size_t

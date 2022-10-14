@@ -134,10 +134,6 @@ ClientBase::ClientBase(
 {
 }
 
-ClientBase::~ClientBase()
-{
-}
-
 bool
 ClientBase::action_server_is_ready() const
 {
