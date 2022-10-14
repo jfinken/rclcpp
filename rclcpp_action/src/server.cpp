@@ -130,6 +130,11 @@ ServerBase::ServerBase(
   }
 }
 
+ServerBase::~ServerBase()
+{
+  clear_on_ready_callback();
+}
+
 size_t
 ServerBase::get_number_of_ready_subscriptions()
 {

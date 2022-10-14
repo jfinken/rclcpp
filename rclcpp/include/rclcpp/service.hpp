@@ -65,7 +65,7 @@ public:
     std::shared_ptr<rclcpp::node_interfaces::NodeBaseInterface> node_base);
 
   RCLCPP_PUBLIC
-  virtual ~ServiceBase() = default;
+  virtual ~ServiceBase();
 
   /// Return the name of the service.
   /** \return The name of the service. */
