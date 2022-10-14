@@ -65,7 +65,7 @@ public:
     std::shared_ptr<rclcpp::node_interfaces::NodeBaseInterface> node_base);
 
   RCLCPP_PUBLIC
-  virtual ~ServiceBase();
+  virtual ~ServiceBase() = default;
 
   /// Return the name of the service.
   /** \return The name of the service. */
@@ -294,6 +294,14 @@ protected:
   std::shared_ptr<rcl_node_t> node_handle_;
   std::shared_ptr<rclcpp::Context> context_;
 
+  std::recursive_mutex callback_mutex_;
+  // It is important to declare on_new_request_callback_ before
+  // service_handle_, so on destruction the service is
+  // destroyed first. Otherwise, the rmw service callback
+  // would point briefly to a destroyed function.
+  std::function<void(size_t)> on_new_request_callback_{nullptr};
+  // Declare service_handle_ after callback
+
   std::shared_ptr<rcl_service_t> service_handle_;
   bool owns_rcl_handle_ = true;
 
@@ -305,9 +313,6 @@ protected:
   bool use_intra_process_{false};
   IntraProcessManagerWeakPtr weak_ipm_;
   uint64_t intra_process_service_id_;
-
-  std::recursive_mutex callback_mutex_;
-  std::function<void(size_t)> on_new_request_callback_{nullptr};
 };
 
 template<typename ServiceT>

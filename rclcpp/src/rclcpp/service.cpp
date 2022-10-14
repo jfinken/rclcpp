@@ -35,11 +35,6 @@ ServiceBase::ServiceBase(
   node_logger_(rclcpp::get_node_logger(node_base->get_shared_rcl_node_handle().get()))
 {}
 
-ServiceBase::~ServiceBase()
-{
-  clear_on_new_request_callback();
-}
-
 bool
 ServiceBase::take_type_erased_request(void * request_out, rmw_request_id_t & request_id_out)
 {
