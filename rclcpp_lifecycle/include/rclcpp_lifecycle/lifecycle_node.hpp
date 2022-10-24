@@ -752,7 +752,7 @@ public:
    */
   RCLCPP_LIFECYCLE_PUBLIC
   std::vector<State>
-  get_available_states();
+  get_available_states() const;
 
   /// Return a list with the current available transitions.
   /**
@@ -760,7 +760,7 @@ public:
    */
   RCLCPP_LIFECYCLE_PUBLIC
   std::vector<Transition>
-  get_available_transitions();
+  get_available_transitions() const;
 
   /// Return a list with all the transitions.
   /**
@@ -768,7 +768,7 @@ public:
    */
   RCLCPP_LIFECYCLE_PUBLIC
   std::vector<Transition>
-  get_transition_graph();
+  get_transition_graph() const;
 
   /// Trigger the specified transition.
   /*
