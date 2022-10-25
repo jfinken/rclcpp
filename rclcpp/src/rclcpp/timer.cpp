@@ -73,6 +73,11 @@ TimerBase::TimerBase(
   }
 }
 
+TimerBase::~TimerBase()
+{
+  clear_on_reset_callback();
+}
+
 void
 TimerBase::cancel()
 {

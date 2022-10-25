@@ -63,7 +63,7 @@ public:
   /// TimerBase destructor
   RCLCPP_PUBLIC
   virtual
-  ~TimerBase() = default;
+  ~TimerBase();
 
   /// Cancel the timer.
   /**
@@ -173,6 +173,9 @@ public:
   clear_on_reset_callback();
 
 protected:
+  std::recursive_mutex callback_mutex_;
+  std::function<void(size_t)> on_reset_callback_{nullptr};
+
   Clock::SharedPtr clock_;
   std::shared_ptr<rcl_timer_t> timer_handle_;
 
@@ -181,9 +184,6 @@ protected:
   RCLCPP_PUBLIC
   void
   set_on_reset_callback(rcl_event_callback_t callback, const void * user_data);
-
-  std::recursive_mutex callback_mutex_;
-  std::function<void(size_t)> on_reset_callback_{nullptr};
 };
 
 
