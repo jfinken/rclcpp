@@ -358,10 +358,6 @@ protected:
   wait_for_service_nanoseconds(std::chrono::nanoseconds timeout);
 
   RCLCPP_PUBLIC
-  bool
-  wait_for_intra_process_service_nanoseconds(std::chrono::nanoseconds timeout);
-
-  RCLCPP_PUBLIC
   rcl_node_t *
   get_rcl_node_handle();
 
