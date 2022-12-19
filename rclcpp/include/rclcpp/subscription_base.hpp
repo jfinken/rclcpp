@@ -348,7 +348,7 @@ public:
     // This two-step setting, prevents a gap where the old std::function has
     // been replaced but the middleware hasn't been told about the new one yet.
     set_on_new_message_callback(
-      rclcpp::detail::cpp_callback_trampoline<const void *, size_t>,
+      rclcpp::detail::cpp_callback_trampoline<decltype(new_callback), const void *, size_t>,
       static_cast<const void *>(&new_callback));
 
     // Store the std::function to keep it in scope, also overwrites the existing one.
@@ -356,7 +356,8 @@ public:
 
     // Set it again, now using the permanent storage.
     set_on_new_message_callback(
-      rclcpp::detail::cpp_callback_trampoline<const void *, size_t>,
+      rclcpp::detail::cpp_callback_trampoline<
+        decltype(on_new_message_callback_), const void *, size_t>,
       static_cast<const void *>(&on_new_message_callback_));
   }
 
@@ -557,6 +558,14 @@ protected:
   rclcpp::node_interfaces::NodeBaseInterface * const node_base_;
 
   std::shared_ptr<rcl_node_t> node_handle_;
+
+  std::recursive_mutex callback_mutex_;
+  // It is important to declare on_new_message_callback_ before
+  // subscription_handle_, so on destruction the subscription is
+  // destroyed first. Otherwise, the rmw subscription callback
+  // would point briefly to a destroyed function.
+  std::function<void(size_t)> on_new_message_callback_{nullptr};
+  // Declare subscription_handle_ after callback
   std::shared_ptr<rcl_subscription_t> subscription_handle_;
   std::shared_ptr<rcl_subscription_t> intra_process_subscription_handle_;
   rclcpp::Logger node_logger_;
@@ -579,9 +588,6 @@ private:
   std::atomic<bool> intra_process_subscription_waitable_in_use_by_wait_set_{false};
   std::unordered_map<rclcpp::QOSEventHandlerBase *,
     std::atomic<bool>> qos_events_in_use_by_wait_set_;
-
-  std::recursive_mutex callback_mutex_;
-  std::function<void(size_t)> on_new_message_callback_{nullptr};
 };
 
 }  // namespace rclcpp

@@ -327,7 +327,7 @@ public:
     // This two-step setting, prevents a gap where the old std::function has
     // been replaced but the middleware hasn't been told about the new one yet.
     set_on_new_response_callback(
-      rclcpp::detail::cpp_callback_trampoline<const void *, size_t>,
+      rclcpp::detail::cpp_callback_trampoline<decltype(new_callback), const void *, size_t>,
       static_cast<const void *>(&new_callback));
 
     // Store the std::function to keep it in scope, also overwrites the existing one.
@@ -335,7 +335,8 @@ public:
 
     // Set it again, now using the permanent storage.
     set_on_new_response_callback(
-      rclcpp::detail::cpp_callback_trampoline<const void *, size_t>,
+      rclcpp::detail::cpp_callback_trampoline<
+        decltype(on_new_response_callback_), const void *, size_t>,
       static_cast<const void *>(&on_new_response_callback_));
   }
 
@@ -387,6 +388,13 @@ protected:
   std::shared_ptr<rclcpp::Context> context_;
   rclcpp::Logger node_logger_;
 
+  std::recursive_mutex callback_mutex_;
+  // It is important to declare on_new_response_callback_ before
+  // client_handle_, so on destruction the client is
+  // destroyed first. Otherwise, the rmw client callback
+  // would point briefly to a destroyed function.
+  std::function<void(size_t)> on_new_response_callback_{nullptr};
+  // Declare client_handle_ after callback
   std::shared_ptr<rcl_client_t> client_handle_;
 
   std::atomic<bool> in_use_by_wait_set_{false};
@@ -395,9 +403,6 @@ protected:
   bool use_intra_process_{false};
   IntraProcessManagerWeakPtr weak_ipm_;
   uint64_t intra_process_client_id_;
-
-  std::recursive_mutex callback_mutex_;
-  std::function<void(size_t)> on_new_response_callback_{nullptr};
 };
 
 template<typename ServiceT>
