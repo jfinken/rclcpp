@@ -136,7 +136,7 @@ public:
     rclcpp::node_interfaces::NodeGraphInterface::SharedPtr node_graph);
 
   RCLCPP_PUBLIC
-  virtual ~ClientBase() = default;
+  virtual ~ClientBase();
 
   /// Take the next response for this client as a type erased pointer.
   /**
@@ -301,7 +301,7 @@ public:
               "is not callable.");
     }
 
-    auto new_callback =
+    std::function<void(size_t)> new_callback =
       [callback, this](size_t number_of_responses) {
         try {
           callback(number_of_responses);
@@ -327,7 +327,7 @@ public:
     // This two-step setting, prevents a gap where the old std::function has
     // been replaced but the middleware hasn't been told about the new one yet.
     set_on_new_response_callback(
-      rclcpp::detail::cpp_callback_trampoline<const void *, size_t>,
+      rclcpp::detail::cpp_callback_trampoline<decltype(new_callback), const void *, size_t>,
       static_cast<const void *>(&new_callback));
 
     // Store the std::function to keep it in scope, also overwrites the existing one.
@@ -335,7 +335,8 @@ public:
 
     // Set it again, now using the permanent storage.
     set_on_new_response_callback(
-      rclcpp::detail::cpp_callback_trampoline<const void *, size_t>,
+      rclcpp::detail::cpp_callback_trampoline<
+        decltype(on_new_response_callback_), const void *, size_t>,
       static_cast<const void *>(&on_new_response_callback_));
   }
 
@@ -387,6 +388,13 @@ protected:
   std::shared_ptr<rclcpp::Context> context_;
   rclcpp::Logger node_logger_;
 
+  std::recursive_mutex callback_mutex_;
+  // It is important to declare on_new_response_callback_ before
+  // client_handle_, so on destruction the client is
+  // destroyed first. Otherwise, the rmw client callback
+  // would point briefly to a destroyed function.
+  std::function<void(size_t)> on_new_response_callback_{nullptr};
+  // Declare client_handle_ after callback
   std::shared_ptr<rcl_client_t> client_handle_;
 
   std::atomic<bool> in_use_by_wait_set_{false};
@@ -395,9 +403,6 @@ protected:
   bool use_intra_process_{false};
   IntraProcessManagerWeakPtr weak_ipm_;
   uint64_t intra_process_client_id_;
-
-  std::recursive_mutex callback_mutex_;
-  std::function<void(size_t)> on_new_response_callback_{nullptr};
 };
 
 template<typename ServiceT>
@@ -843,39 +848,39 @@ protected:
   int64_t
   async_send_request_impl(SharedRequest request, CallbackInfoVariant value)
   {
-    std::lock_guard<std::recursive_mutex> lock(ipc_mutex_);
-    if (use_intra_process_) {
-      auto ipm = weak_ipm_.lock();
-      if (!ipm) {
-        throw std::runtime_error(
-                "intra process send called after destruction of intra process manager");
-      }
-      bool intra_process_server_available = ipm->service_is_available(intra_process_client_id_);
+    {
+      std::lock_guard<std::recursive_mutex> lock(ipc_mutex_);
+      if (use_intra_process_) {
+        auto ipm = weak_ipm_.lock();
+        if (!ipm) {
+          throw std::runtime_error(
+                  "intra process send called after destruction of intra process manager");
+        }
+        bool intra_process_server_available = ipm->service_is_available(intra_process_client_id_);
 
-      // Check if there's an intra-process server available matching this client.
-      // If there's not, we fall back into inter-process communication, since
-      // the server might be available in another process or was configured to not use IPC.
-      if (intra_process_server_available) {
-        // Send intra-process request
-        ipm->send_intra_process_client_request<ServiceT>(
-          intra_process_client_id_,
-          std::make_pair(std::move(request), std::move(value)));
-        return ipc_sequence_number_++;
+        // Check if there's an intra-process server available matching this client.
+        // If there's not, we fall back into inter-process communication, since
+        // the server might be available in another process or was configured to not use IPC.
+        if (intra_process_server_available) {
+          // Send intra-process request
+          ipm->send_intra_process_client_request<ServiceT>(
+            intra_process_client_id_,
+            std::make_pair(std::move(request), std::move(value)));
+          return ipc_sequence_number_++;
+        }
       }
     }
 
     // Send inter-process request
     int64_t sequence_number;
+    std::lock_guard<std::mutex> lock(pending_requests_mutex_);
     rcl_ret_t ret = rcl_send_request(get_client_handle().get(), request.get(), &sequence_number);
     if (RCL_RET_OK != ret) {
       rclcpp::exceptions::throw_from_rcl_error(ret, "failed to send request");
     }
-    {
-      std::lock_guard<std::mutex> lock(pending_requests_mutex_);
-      pending_requests_.try_emplace(
-        sequence_number,
-        std::make_pair(std::chrono::system_clock::now(), std::move(value)));
-    }
+    pending_requests_.try_emplace(
+      sequence_number,
+      std::make_pair(std::chrono::system_clock::now(), std::move(value)));
     return sequence_number;
   }
 

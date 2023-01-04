@@ -132,6 +132,7 @@ ServerBase::ServerBase(
 
 ServerBase::~ServerBase()
 {
+  clear_on_ready_callback();
 }
 
 size_t
@@ -759,7 +760,7 @@ ServerBase::set_callback_to_entity(
   std::function<void(size_t, int)> callback)
 {
   // Note: we bind the int identifier argument to this waitable's entity types
-  auto new_callback =
+  std::function<void(size_t)> new_callback =
     [callback, entity_type, this](size_t number_of_events) {
       try {
         callback(number_of_events, static_cast<int>(entity_type));
@@ -785,7 +786,7 @@ ServerBase::set_callback_to_entity(
   // been replaced but the middleware hasn't been told about the new one yet.
   set_on_ready_callback(
     entity_type,
-    rclcpp::detail::cpp_callback_trampoline<const void *, size_t>,
+    rclcpp::detail::cpp_callback_trampoline<decltype(new_callback), const void *, size_t>,
     static_cast<const void *>(&new_callback));
 
   std::lock_guard<std::recursive_mutex> lock(listener_mutex_);
@@ -805,7 +806,7 @@ ServerBase::set_callback_to_entity(
     auto & cb = it->second;
     set_on_ready_callback(
       entity_type,
-      rclcpp::detail::cpp_callback_trampoline<const void *, size_t>,
+      rclcpp::detail::cpp_callback_trampoline<decltype(it->second), const void *, size_t>,
       static_cast<const void *>(&cb));
   }
 
