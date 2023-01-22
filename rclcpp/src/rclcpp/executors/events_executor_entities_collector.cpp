@@ -638,7 +638,7 @@ EventsExecutorEntitiesCollector::create_entity_callback_with_log(
         static_cast<int>(num_events),
         event_type == SERVICE_EVENT ? "server" : "client",
         exec_entity_id,
-        static_cast<void*>(associated_executor_.get()));
+        static_cast<void*>(associated_executor_));
     ExecutorEvent event = {exec_entity_id, -1, event_type, num_events};
     associated_executor_->events_queue_->enqueue(event);
   };
