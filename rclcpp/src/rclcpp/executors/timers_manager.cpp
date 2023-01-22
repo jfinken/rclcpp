@@ -46,10 +46,21 @@ void TimersManager::add_timer(rclcpp::TimerBase::SharedPtr timer)
     timers_updated_ = timers_updated_ || added;
   }
 
-  if (added) {
-    // Notify that a timer has been added
-    timers_cv_.notify_one();
+  if (!added) {
+    return;
   }
+
+  timer->set_on_reset_callback([this](size_t arg){
+    {
+      (void)arg;
+      std::unique_lock<std::mutex> lock(timers_mutex_);
+      timers_updated_ = true;
+    }
+    timers_cv_.notify_one();
+  });
+  
+  // Notify that a timer has been added
+  timers_cv_.notify_one();
 }
 
 void TimersManager::start()
@@ -268,8 +279,12 @@ void TimersManager::remove_timer(TimerPtr timer)
     timers_updated_ = timers_updated_ || removed;
   }
 
-  if (removed) {
-    // Notify timers thread such that it can re-compute its timeout
-    timers_cv_.notify_one();
+  if (!removed) {
+    return;
   }
+
+  // Notify timers thread such that it can re-compute its timeout
+  timers_cv_.notify_one();
+
+  timer->clear_on_reset_callback();
 }
