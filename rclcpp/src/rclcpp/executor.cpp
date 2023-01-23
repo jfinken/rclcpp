@@ -104,11 +104,11 @@ Executor::~Executor()
   weak_groups_associated_with_executor_to_nodes_.clear();
   weak_groups_to_nodes_associated_with_executor_.clear();
   weak_groups_to_nodes_.clear();
-  for (const auto & pair : weak_nodes_to_guard_conditions_) {
+  for (const auto & pair : weak_groups_to_guard_conditions_) {
     auto & guard_condition = pair.second;
     memory_strategy_->remove_guard_condition(*guard_condition);
   }
-  weak_nodes_to_guard_conditions_.clear();
+  weak_groups_to_guard_conditions_.clear();
 
   // Finalize the wait set.
   if (rcl_wait_set_fini(&wait_set_) != RCL_RET_OK) {
@@ -203,8 +203,7 @@ Executor::add_callback_group_to_map(
   if (has_executor.exchange(true)) {
     throw std::runtime_error("Callback group has already been added to an executor.");
   }
-  bool is_new_node = !has_node(node_ptr, weak_groups_to_nodes_associated_with_executor_) &&
-    !has_node(node_ptr, weak_groups_associated_with_executor_to_nodes_);
+
   rclcpp::CallbackGroup::WeakPtr weak_group_ptr = group_ptr;
   auto insert_info =
     weak_groups_to_nodes.insert(std::make_pair(weak_group_ptr, node_ptr));
@@ -214,16 +213,26 @@ Executor::add_callback_group_to_map(
   }
   // Also add to the map that contains all callback groups
   weak_groups_to_nodes_.insert(std::make_pair(weak_group_ptr, node_ptr));
-  if (is_new_node) {
-    const auto & gc = node_ptr->get_notify_guard_condition();
-    weak_nodes_to_guard_conditions_[node_ptr] = &gc;
-    if (notify) {
-      // Interrupt waiting to handle new node
-      interrupt_guard_condition_.trigger();
-    }
-    // Add the node's notify condition to the guard condition handles
-    memory_strategy_->add_guard_condition(gc);
+
+  if (node_ptr->get_context()->is_valid()) {
+    auto callback_group_guard_condition =
+      group_ptr->get_notify_guard_condition(node_ptr->get_context());
+    weak_groups_to_guard_conditions_[weak_group_ptr] = callback_group_guard_condition.get();
+    // Add the callback_group's notify condition to the guard condition handles
+    memory_strategy_->add_guard_condition(*callback_group_guard_condition);
   }
+
+  if (notify) {
+    // Interrupt waiting to handle new node
+    try {
+      interrupt_guard_condition_.trigger();
+    } catch (const rclcpp::exceptions::RCLError & ex) {
+      throw std::runtime_error(
+              std::string(
+                "Failed to trigger guard condition on callback group add: ") + ex.what());
+    }
+  }
+
 }
 
 void
@@ -289,11 +298,21 @@ Executor::remove_callback_group_from_map(
   if (!has_node(node_ptr, weak_groups_to_nodes_associated_with_executor_) &&
     !has_node(node_ptr, weak_groups_associated_with_executor_to_nodes_))
   {
-    weak_nodes_to_guard_conditions_.erase(node_ptr);
-    if (notify) {
-      interrupt_guard_condition_.trigger();
+    auto iter = weak_groups_to_guard_conditions_.find(weak_group_ptr);
+    if (iter != weak_groups_to_guard_conditions_.end()) {
+      memory_strategy_->remove_guard_condition(iter->second);
     }
-    memory_strategy_->remove_guard_condition(node_ptr->get_notify_guard_condition());
+    weak_groups_to_guard_conditions_.erase(weak_group_ptr);
+
+    if (notify) {
+      try {
+        interrupt_guard_condition_.trigger();
+      } catch (const rclcpp::exceptions::RCLError & ex) {
+        throw std::runtime_error(
+                std::string(
+                  "Failed to trigger guard condition on callback group remove: ") + ex.what());
+      }
+    }
   }
 }
 
@@ -666,12 +685,6 @@ Executor::wait_for_work(std::chrono::nanoseconds timeout)
         auto weak_node_ptr = pair.second;
         if (weak_group_ptr.expired() || weak_node_ptr.expired()) {
           invalid_group_ptrs.push_back(weak_group_ptr);
-          auto node_guard_pair = weak_nodes_to_guard_conditions_.find(weak_node_ptr);
-          if (node_guard_pair != weak_nodes_to_guard_conditions_.end()) {
-            const auto & guard_condition = node_guard_pair->second;
-            weak_nodes_to_guard_conditions_.erase(weak_node_ptr);
-            memory_strategy_->remove_guard_condition(*guard_condition);
-          }
         }
       }
       std::for_each(
@@ -686,6 +699,12 @@ Executor::wait_for_work(std::chrono::nanoseconds timeout)
           weak_groups_associated_with_executor_to_nodes_.end())
           {
             weak_groups_associated_with_executor_to_nodes_.erase(group_ptr);
+          }
+          auto callback_guard_pair = weak_groups_to_guard_conditions_.find(group_ptr);
+          if (callback_guard_pair != weak_groups_to_guard_conditions_.end()) {
+            auto guard_condition = callback_guard_pair->second;
+            weak_groups_to_guard_conditions_.erase(group_ptr);
+            memory_strategy_->remove_guard_condition(guard_condition);
           }
           weak_groups_to_nodes_.erase(group_ptr);
         });
