@@ -147,7 +147,7 @@ EventsExecutorEntitiesCollector::add_callback_group(
 
     // Set an event callback for the node's notify guard condition, so if new entities are added
     // or removed to this node we will receive an event.
-    set_guard_condition_callback(callback_group_guard_condition);
+    set_guard_condition_callback(callback_group_guard_condition.get());
 
     rclcpp::CallbackGroup::WeakPtr weak_group_ptr = group_ptr;
     weak_groups_to_guard_conditions_[weak_group_ptr] = callback_group_guard_condition.get();

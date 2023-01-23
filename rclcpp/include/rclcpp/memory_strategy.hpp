@@ -77,6 +77,9 @@ public:
   remove_guard_condition(const rclcpp::GuardCondition::SharedPtr guard_condition) = 0;
 
   virtual void
+  remove_guard_condition(const rclcpp::GuardCondition * guard_condition) = 0;
+
+  virtual void
   get_next_subscription(
     rclcpp::AnyExecutable & any_exec,
     const WeakCallbackGroupsToNodesMap & weak_groups_to_nodes) = 0;
