@@ -65,12 +65,12 @@ EventsExecutorEntitiesCollector::~EventsExecutorEntitiesCollector()
     }
   }
 
-  // Unset nodes notify guard condition executor callback
-  for (const auto & pair : weak_nodes_to_guard_conditions_) {
-    auto node = pair.first.lock();
-    if (node) {
-      auto & node_gc = pair.second;
-      unset_guard_condition_callback(node_gc);
+  // Unset callback group notify guard condition executor callback
+  for (const auto & pair : weak_groups_to_guard_conditions_) {
+    auto group = pair.first.lock();
+    if (group) {
+      auto & group_gc = pair.second;
+      unset_guard_condition_callback(group_gc);
     }
   }
 
@@ -80,7 +80,7 @@ EventsExecutorEntitiesCollector::~EventsExecutorEntitiesCollector()
   weak_services_map_.clear();
   weak_waitables_map_.clear();
   weak_subscriptions_map_.clear();
-  weak_nodes_to_guard_conditions_.clear();
+  weak_groups_to_guard_conditions_.clear();
   weak_groups_associated_with_executor_to_nodes_.clear();
   weak_groups_to_nodes_associated_with_executor_.clear();
 }
@@ -141,17 +141,16 @@ EventsExecutorEntitiesCollector::add_callback_group(
     throw std::runtime_error("Callback group has already been added to an executor.");
   }
 
-  bool is_new_node = !has_node(node_ptr, weak_groups_associated_with_executor_to_nodes_) &&
-    !has_node(node_ptr, weak_groups_to_nodes_associated_with_executor_);
+  if (node_ptr->get_context()->is_valid()) {
+    auto callback_group_guard_condition =
+      group_ptr->get_notify_guard_condition(node_ptr->get_context());
 
-  if (is_new_node) {
-    auto notify_guard_condition = &(node_ptr->get_notify_guard_condition());
     // Set an event callback for the node's notify guard condition, so if new entities are added
     // or removed to this node we will receive an event.
-    set_guard_condition_callback(notify_guard_condition);
+    set_guard_condition_callback(callback_group_guard_condition);
 
-    // Store node's notify guard condition
-    weak_nodes_to_guard_conditions_[node_ptr] = notify_guard_condition;
+    rclcpp::CallbackGroup::WeakPtr weak_group_ptr = group_ptr;
+    weak_groups_to_guard_conditions_[weak_group_ptr] = callback_group_guard_condition.get();
   }
 
   // Add callback group to weak_groups_to_node
@@ -379,14 +378,17 @@ EventsExecutorEntitiesCollector::remove_callback_group_from_map(
     has_node(node_ptr, weak_groups_to_nodes_associated_with_executor_);
 
   if (!node_has_associated_callback_groups) {
-    // Node doesn't have more callback groups associated to the executor.
-    // Unset the event callback for the node's notify guard condition, to stop
-    // receiving events if entities are added or removed to this node.
-    unset_guard_condition_callback(&(node_ptr->get_notify_guard_condition()));
+    rclcpp::CallbackGroup::WeakPtr weak_group_ptr = group_ptr;
+    auto iter = weak_groups_to_guard_conditions_.find(weak_group_ptr);
+    if (iter != weak_groups_to_guard_conditions_.end()) {
+      // Node doesn't have more callback groups associated to the executor.
+      // Unset the event callback for the node's notify guard condition, to stop
+      // receiving events if entities are added or removed to this node.
+      unset_guard_condition_callback(iter->second);
+    }
 
     // Remove guard condition from list
-    rclcpp::node_interfaces::NodeBaseInterface::WeakPtr weak_node_ptr(node_ptr);
-    weak_nodes_to_guard_conditions_.erase(weak_node_ptr);
+    weak_groups_to_guard_conditions_.erase(weak_group_ptr);
   }
 }
 
