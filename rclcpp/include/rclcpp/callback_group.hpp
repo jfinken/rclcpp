@@ -16,9 +16,9 @@
 #define RCLCPP__CALLBACK_GROUP_HPP_
 
 #include <atomic>
+#include <functional>
 #include <memory>
 #include <mutex>
-#include <string>
 #include <vector>
 
 #include "rclcpp/client.hpp"
@@ -98,6 +98,10 @@ public:
     CallbackGroupType group_type,
     bool automatically_add_to_executor_with_node = true);
 
+  /// Default destructor.
+  RCLCPP_PUBLIC
+  ~CallbackGroup();
+
   template<typename Function>
   rclcpp::SubscriptionBase::SharedPtr
   find_subscription_ptrs_if(Function func) const
@@ -174,20 +178,15 @@ public:
   bool
   automatically_add_to_executor_with_node() const;
 
-  /// Create and return the notify guard condition.
+  /// Defer creating the notify guard condition and return it.
   RCLCPP_PUBLIC
   rclcpp::GuardCondition::SharedPtr
-  create_notify_guard_condition(const rclcpp::Context::SharedPtr context_ptr);
+  get_notify_guard_condition(const rclcpp::Context::SharedPtr context_ptr);
 
-  /// Destroy the notify guard condition.
+  /// Trigger the notify guard condition.
   RCLCPP_PUBLIC
   void
-  destroy_notify_guard_condition();
-
-  /// Return the notify guard condition.
-  RCLCPP_PUBLIC
-  rclcpp::GuardCondition::SharedPtr
-  get_notify_guard_condition();
+  trigger_notify_guard_condition();
 
 protected:
   RCLCPP_DISABLE_COPY(CallbackGroup)
@@ -233,7 +232,7 @@ protected:
   const bool automatically_add_to_executor_with_node_;
   // defer the creation of the guard condition
   std::shared_ptr<rclcpp::GuardCondition> notify_guard_condition_ = nullptr;
-  std::mutex notify_guard_condition_mutex_;
+  std::recursive_mutex notify_guard_condition_mutex_;
 
 private:
   template<typename TypeT, typename Function>

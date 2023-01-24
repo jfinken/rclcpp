@@ -41,19 +41,11 @@ NodeServices::add_service(
 
   group->add_service(service_base_ptr);
 
-  auto service_intra_process_waitable = service_base_ptr->get_intra_process_waitable();
-  if (nullptr != service_intra_process_waitable) {
-    // Add to the callback group to be notified about intra-process msgs.
-    group->add_waitable(service_intra_process_waitable);
-  }
-
   // Notify the executor that a new service was created using the parent Node.
   auto & node_gc = node_base_->get_notify_guard_condition();
   try {
     node_gc.trigger();
-    if (auto callback_group_gc = group->get_notify_guard_condition()) {
-      callback_group_gc->trigger();
-    }
+    group->trigger_notify_guard_condition();
   } catch (const rclcpp::exceptions::RCLError & ex) {
     throw std::runtime_error(
             std::string("failed to notify wait set on service creation: ") + ex.what());
@@ -76,19 +68,11 @@ NodeServices::add_client(
 
   group->add_client(client_base_ptr);
 
-  auto client_intra_process_waitable = client_base_ptr->get_intra_process_waitable();
-  if (nullptr != client_intra_process_waitable) {
-    // Add to the callback group to be notified about intra-process msgs.
-    group->add_waitable(client_intra_process_waitable);
-  }
-
   // Notify the executor that a new client was created using the parent Node.
   auto & node_gc = node_base_->get_notify_guard_condition();
   try {
     node_gc.trigger();
-    if (auto callback_group_gc = group->get_notify_guard_condition()) {
-      callback_group_gc->trigger();
-    }
+    group->trigger_notify_guard_condition();
   } catch (const rclcpp::exceptions::RCLError & ex) {
     throw std::runtime_error(
             std::string("failed to notify wait set on client creation: ") + ex.what());
