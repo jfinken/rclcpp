@@ -35,9 +35,7 @@ UnsupportedEventTypeException::UnsupportedEventTypeException(
 
 QOSEventHandlerBase::~QOSEventHandlerBase()
 {
-  if (on_new_event_callback_) {
-    clear_on_ready_callback();
-  }
+  clear_on_ready_callback();
 
   if (rcl_event_fini(&event_handle_) != RCL_RET_OK) {
     RCUTILS_LOG_ERROR_NAMED(
