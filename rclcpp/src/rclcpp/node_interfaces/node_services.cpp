@@ -48,9 +48,8 @@ NodeServices::add_service(
   }
 
   // Notify the executor that a new service was created using the parent Node.
-  auto & node_gc = node_base_->get_notify_guard_condition();
   try {
-    node_gc.trigger();
+    node_base_->trigger_notify_guard_condition();
     group->trigger_notify_guard_condition();
   } catch (const rclcpp::exceptions::RCLError & ex) {
     throw std::runtime_error(
@@ -81,9 +80,8 @@ NodeServices::add_client(
   }
 
   // Notify the executor that a new client was created using the parent Node.
-  auto & node_gc = node_base_->get_notify_guard_condition();
   try {
-    node_gc.trigger();
+    node_base_->trigger_notify_guard_condition();
     group->trigger_notify_guard_condition();
   } catch (const rclcpp::exceptions::RCLError & ex) {
     throw std::runtime_error(
