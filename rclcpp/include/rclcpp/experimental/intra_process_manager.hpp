@@ -926,7 +926,7 @@ private:
         if (std::next(it) == subscription_ids.end()) {
           // If this is the last subscription, give up ownership
           subscription->provide_intra_process_data(std::move(message));
-          // Nothing else to do
+          // Last message delivered, break from for loop
           break;
         } else {
           // Copy the message since we have additional subscriptions to serve
@@ -967,7 +967,7 @@ private:
           if (std::next(it) == subscription_ids.end()) {
             // If this is the last subscription, give up ownership
             ros_message_subscription->provide_intra_process_message(std::move(message));
-            // Nothing else to do
+            // Last message delivered, break from for loop
             break;
           } else {
             // Copy the message since we have additional subscriptions to serve
