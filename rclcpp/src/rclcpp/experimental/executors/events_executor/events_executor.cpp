@@ -391,6 +391,8 @@ EventsExecutor::refresh_current_collection_from_callback_groups()
   rclcpp::executors::ExecutorEntitiesCollection new_collection;
   rclcpp::executors::build_entities_collection(callback_groups, new_collection);
 
+  current_entities_collection_->remove_expired_entities();
+
   // TODO(alsora): this may be implemented in a better way.
   // We need the notify waitable to be included in the executor "current_collection"
   // because we need to be able to retrieve events for it.
