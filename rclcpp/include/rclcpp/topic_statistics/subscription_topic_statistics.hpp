@@ -81,7 +81,8 @@ public:
     const std::string & node_name,
     rclcpp::Publisher<statistics_msgs::msg::MetricsMessage>::SharedPtr publisher)
   : node_name_(node_name),
-    publisher_(std::move(publisher))
+    publisher_(std::move(publisher)),
+    window_start_(int64_t{0}, RCL_SYSTEM_TIME)
   {
     // TODO(dbbonnie): ros-tooling/aws-roadmap/issues/226, received message age
 
@@ -130,7 +131,7 @@ public:
   virtual void publish_message_and_reset_measurements()
   {
     std::vector<MetricsMessage> msgs;
-    rclcpp::Time window_end{get_current_nanoseconds_since_epoch()};
+    rclcpp::Time window_end{get_current_nanoseconds_since_epoch(), RCL_SYSTEM_TIME};
 
     {
       std::lock_guard<std::mutex> lock(mutex_);
@@ -190,7 +191,7 @@ private:
       subscriber_statistics_collectors_.emplace_back(std::move(received_message_period));
     }
 
-    window_start_ = rclcpp::Time(get_current_nanoseconds_since_epoch());
+    window_start_ = rclcpp::Time(get_current_nanoseconds_since_epoch(), RCL_SYSTEM_TIME);
   }
 
   /// Stop all collectors, clear measurements, stop publishing timer, and reset publisher.

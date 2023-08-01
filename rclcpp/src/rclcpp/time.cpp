@@ -107,9 +107,10 @@ Time &
 Time::operator=(const Time & rhs) = default;
 
 Time &
-Time::operator=(const builtin_interfaces::msg::Time & time_msg)
+Time::operator=(const builtin_interfaces::msg::Time & time_msg,
+    rcl_clock_type_t clock_type)
 {
-  *this = Time(time_msg);
+  *this = Time(time_msg, clock_type);
   return *this;
 }
 
@@ -278,7 +279,7 @@ Time::operator-=(const rclcpp::Duration & rhs)
 Time
 Time::max()
 {
-  return Time(std::numeric_limits<int32_t>::max(), 999999999);
+  return Time(std::numeric_limits<int32_t>::max(), 999999999, RCL_SYSTEM_TIME);
 }
 
 

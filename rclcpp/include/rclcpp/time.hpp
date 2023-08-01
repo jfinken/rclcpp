@@ -43,7 +43,7 @@ public:
    * \throws std::runtime_error if seconds are negative
    */
   RCLCPP_PUBLIC
-  Time(int32_t seconds, uint32_t nanoseconds, rcl_clock_type_t clock_type = RCL_SYSTEM_TIME);
+  Time(int32_t seconds, uint32_t nanoseconds, rcl_clock_type_t clock_type);
 
   /// Time constructor
   /**
@@ -51,7 +51,7 @@ public:
    * \param clock_type clock type
    */
   RCLCPP_PUBLIC
-  explicit Time(int64_t nanoseconds = 0, rcl_clock_type_t clock_type = RCL_SYSTEM_TIME);
+  Time(int64_t nanoseconds, rcl_clock_type_t clock_type);
 
   /// Copy constructor
   RCLCPP_PUBLIC
@@ -66,7 +66,7 @@ public:
   RCLCPP_PUBLIC
   Time(
     const builtin_interfaces::msg::Time & time_msg,
-    rcl_clock_type_t clock_type = RCL_ROS_TIME);
+    rcl_clock_type_t clock_type);
 
   /// Time constructor
   /**
@@ -98,7 +98,8 @@ public:
    */
   RCLCPP_PUBLIC
   Time &
-  operator=(const builtin_interfaces::msg::Time & time_msg);
+  operator=(const builtin_interfaces::msg::Time & time_msg,
+    rcl_clock_type_t clock_type);
 
   /**
    * \throws std::runtime_error if the time sources are different

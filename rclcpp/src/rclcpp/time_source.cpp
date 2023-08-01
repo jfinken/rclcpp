@@ -146,7 +146,7 @@ public:
 
       auto ret = rcl_set_ros_time_override(
         clock->get_clock_handle(),
-        rclcpp::Time(*msg).nanoseconds());
+        rclcpp::Time(*msg, RCL_ROS_TIME).nanoseconds());
       if (ret != RCL_RET_OK) {
         rclcpp::exceptions::throw_from_rcl_error(
           ret, "Failed to set ros_time_override_status");

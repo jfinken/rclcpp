@@ -369,8 +369,8 @@ TEST_F(TestNode, MultipleParameterCallbacks)
 
 TEST_F(TestNode, LastInFirstCallForParameterCallbacks)
 {
-  rclcpp::Time time_1;
-  rclcpp::Time time_2;
+  rclcpp::Time time_1{int64_t(0), RCL_SYSTEM_TIME};
+  rclcpp::Time time_2{int64_t(0), RCL_SYSTEM_TIME};
 
   // The callbacks will log the current time for comparison purposes. Add a bit of a stall
   // to ensure that the time noted in the back-to-back calls isn't the same
@@ -399,8 +399,8 @@ TEST_F(TestNode, LastInFirstCallForParameterCallbacks)
 
 TEST_F(TestNode, LastInFirstCallForParameterEventCallbacks)
 {
-  rclcpp::Time time_1;
-  rclcpp::Time time_2;
+  rclcpp::Time time_1{int64_t(0), RCL_SYSTEM_TIME};
+  rclcpp::Time time_2{int64_t(0), RCL_SYSTEM_TIME};
 
   // The callbacks will log the current time for comparison purposes. Add a bit of a stall
   // to ensure that the time noted in the back-to-back calls isn't the same
