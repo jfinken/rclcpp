@@ -119,6 +119,8 @@ private:
 };
 }  // anonymous namespace
 
+using rclcpp::node_interfaces::map_of_mutexes;
+
 NodeBase::NodeBase(
   const std::string & node_name,
   const std::string & namespace_,
@@ -135,6 +137,9 @@ NodeBase::NodeBase(
   notify_guard_condition_(context),
   notify_guard_condition_is_valid_(false)
 {
+  // Generate a mutex for this instance of NodeBase
+  NodeBase::map_object.create_mutex_of_nodebase(this);
+
   // Create the rcl node and store it in a shared_ptr with a custom destructor.
   std::unique_ptr<rcl_node_t> rcl_node(new rcl_node_t(rcl_get_zero_initialized_node()));
 
@@ -218,6 +223,8 @@ NodeBase::~NodeBase()
     std::lock_guard<std::recursive_mutex> notify_condition_lock(notify_guard_condition_mutex_);
     notify_guard_condition_is_valid_ = false;
   }
+
+  NodeBase::map_object.delete_mutex_of_nodebase(this);
 }
 
 const char *
@@ -273,12 +280,11 @@ NodeBase::create_callback_group(
   rclcpp::CallbackGroupType group_type,
   bool automatically_add_to_executor_with_node)
 {
-  using rclcpp::CallbackGroup;
-  using rclcpp::CallbackGroupType;
-  auto group = CallbackGroup::SharedPtr(
-    new CallbackGroup(
-      group_type,
-      automatically_add_to_executor_with_node));
+  auto group = std::make_shared<rclcpp::CallbackGroup>(
+    group_type,
+    automatically_add_to_executor_with_node);
+  auto mutex_ptr = NodeBase::map_object.get_mutex_of_nodebase(this);
+  std::lock_guard<std::mutex> lock(*mutex_ptr);
   callback_groups_.push_back(group);
   return group;
 }
@@ -292,14 +298,16 @@ NodeBase::get_default_callback_group()
 bool
 NodeBase::callback_group_in_node(rclcpp::CallbackGroup::SharedPtr group)
 {
-  bool group_belongs_to_this_node = false;
+  auto mutex_ptr = NodeBase::map_object.get_mutex_of_nodebase(this);
+  std::lock_guard<std::mutex> lock(*mutex_ptr);
+
   for (auto & weak_group : this->callback_groups_) {
     auto cur_group = weak_group.lock();
     if (cur_group && (cur_group == group)) {
-      group_belongs_to_this_node = true;
+      return true;
     }
   }
-  return group_belongs_to_this_node;
+  return false;
 }
 
 const std::vector<rclcpp::CallbackGroup::WeakPtr> &
@@ -361,4 +369,42 @@ void
 NodeBase::trigger_notify_guard_condition()
 {
   notify_guard_condition_.trigger();
+}
+
+map_of_mutexes NodeBase::map_object = map_of_mutexes();
+
+void map_of_mutexes::create_mutex_of_nodebase(
+  const rclcpp::node_interfaces::NodeBaseInterface * nodebase)
+{
+  std::lock_guard<std::mutex> guard(this->internal_mutex_);
+  this->data_.emplace(nodebase, std::make_shared<std::mutex>() );
+}
+
+std::shared_ptr<std::mutex> map_of_mutexes::get_mutex_of_nodebase(
+  const rclcpp::node_interfaces::NodeBaseInterface * nodebase)
+{
+  std::lock_guard<std::mutex> guard(this->internal_mutex_);
+  return this->data_[nodebase];
+}
+
+void map_of_mutexes::delete_mutex_of_nodebase(
+  const rclcpp::node_interfaces::NodeBaseInterface * nodebase)
+{
+  std::lock_guard<std::mutex> guard(this->internal_mutex_);
+  this->data_.erase(nodebase);
+}
+
+// For each callback group free function implementation
+void rclcpp::node_interfaces::global_for_each_callback_group(
+  NodeBaseInterface * node_base_interface, const NodeBaseInterface::CallbackGroupFunction & func)
+{
+  auto mutex_ptr = NodeBase::map_object.get_mutex_of_nodebase(node_base_interface);
+  std::lock_guard<std::mutex> lock(*mutex_ptr);
+
+  for (const auto & weak_group : node_base_interface->get_callback_groups()) {
+    auto group = weak_group.lock();
+    if (group) {
+      func(group);
+    }
+  }
 }

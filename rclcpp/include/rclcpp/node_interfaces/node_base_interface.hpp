@@ -39,6 +39,8 @@ class NodeBaseInterface
 public:
   RCLCPP_SMART_PTR_ALIASES_ONLY(NodeBaseInterface)
 
+  using CallbackGroupFunction = std::function<void (rclcpp::CallbackGroup::SharedPtr)>;
+
   RCLCPP_PUBLIC
   virtual
   ~NodeBaseInterface() = default;
