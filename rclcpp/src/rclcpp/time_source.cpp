@@ -75,6 +75,7 @@ void TimeSource::attachNode(
   rclcpp::node_interfaces::NodeClockInterface::SharedPtr node_clock_interface,
   rclcpp::node_interfaces::NodeParametersInterface::SharedPtr node_parameters_interface)
 {
+  std::lock_guard<std::mutex> guard(node_base_lock_);
   node_base_ = node_base_interface;
   node_topics_ = node_topics_interface;
   node_graph_ = node_graph_interface;
@@ -134,6 +135,7 @@ void TimeSource::attachNode(
 
 void TimeSource::detachNode()
 {
+  std::lock_guard<std::mutex> guard(node_base_lock_);
   this->ros_time_active_ = false;
   destroy_clock_sub();
   parameter_subscription_.reset();
@@ -296,6 +298,14 @@ void TimeSource::destroy_clock_sub()
 
 void TimeSource::on_parameter_event(const rcl_interfaces::msg::ParameterEvent::SharedPtr event)
 {
+  std::lock_guard<std::mutex> guard(node_base_lock_);
+
+  if (node_base_ == nullptr) {
+    // Do nothing if node_base_ is nullptr because it means the TimeSource is now
+    // without an attached node
+    return;
+  }
+
   // Filter out events on 'use_sim_time' parameter instances in other nodes.
   if (event->node != node_base_->get_fully_qualified_name()) {
     return;

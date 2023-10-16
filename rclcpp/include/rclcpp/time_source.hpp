@@ -131,6 +131,7 @@ protected:
 
 private:
   // Preserve the node reference
+  std::mutex node_base_lock_;
   rclcpp::node_interfaces::NodeBaseInterface::SharedPtr node_base_;
   rclcpp::node_interfaces::NodeTopicsInterface::SharedPtr node_topics_;
   rclcpp::node_interfaces::NodeGraphInterface::SharedPtr node_graph_;
