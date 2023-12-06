@@ -51,9 +51,12 @@ using libstatistics_collector::moving_average_statistics::StatisticData;
   */
 class SubscriptionTopicStatistics
 {
-  using TopicStatsCollector = libstatistics_collector::TopicStatisticsCollector;
-  using ReceivedMessageAge = libstatistics_collector::ReceivedMessageAgeCollector;
-  using ReceivedMessagePeriod = libstatistics_collector::ReceivedMessagePeriodCollector;
+  //using TopicStatsCollector = libstatistics_collector::TopicStatisticsCollector;
+  //using ReceivedMessageAge = libstatistics_collector::ReceivedMessageAgeCollector;
+  //using ReceivedMessagePeriod = libstatistics_collector::ReceivedMessagePeriodCollector;
+  using TopicStatsCollector = libstatistics_collector::topic_statistics_collector::TopicStatisticsCollector;
+  using ReceivedMessageAge = libstatistics_collector::topic_statistics_collector::ReceivedMessageAgeCollector;
+  using ReceivedMessagePeriod = libstatistics_collector::topic_statistics_collector::ReceivedMessagePeriodCollector;
 
 public:
   /// Construct a SubscriptionTopicStatistics object.
