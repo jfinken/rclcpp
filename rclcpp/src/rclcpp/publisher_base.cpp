@@ -208,6 +208,14 @@ PublisherBase::get_non_local_subscription_count() const
       }
     }
   }
+
+  if (RCL_RET_UNSUPPORTED == status) {
+    // TODO: returning -1 is temporary until the API is fully implemented in Cyclone DDS
+    // https://github.com/ros2/rclcpp/issues/2202#issuecomment-1772287249
+    // minimally see: rmw_cyclonedds_cpp/src/rmw_node.cpp
+    return -1;
+  }
+
   if (RCL_RET_OK != status) {
     rclcpp::exceptions::throw_from_rcl_error(status, "failed to get get non local subscription count");
   }

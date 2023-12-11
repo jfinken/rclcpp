@@ -272,8 +272,17 @@ public:
     // interprocess publish, resulting in lower publish-to-subscribe latency.
     // It's not possible to do that with an unique_ptr,
     // as do_intra_process_publish takes the ownership of the message.
-    bool inter_process_publish_needed =
-      get_non_local_subscription_count() > 0;
+
+    int non_local_sub_count = get_non_local_subscription_count();
+    bool inter_process_publish_needed = non_local_sub_count > 0;
+    // The non-local-subscription-count will temporarily be -1 on cyclone dds
+    // until it can be fully implemented there.
+    // If that case, fall-back to the previous methodology.
+    // See the implementation in publisher_base.cpp
+    if(non_local_sub_count < 0) {
+      inter_process_publish_needed =
+        (get_subscription_count() > get_intra_process_subscription_count());
+    }
 
     if (inter_process_publish_needed) {
       auto shared_msg =
@@ -350,8 +359,16 @@ public:
       return this->do_inter_process_publish(ros_msg);
     }
 
-    bool inter_process_publish_needed =
-      get_non_local_subscription_count() > 0;
+    int non_local_sub_count = get_non_local_subscription_count();
+    bool inter_process_publish_needed = non_local_sub_count > 0;
+    // The non-local-subscription-count will temporarily be -1 on cyclone dds
+    // until it can be fully implemented there.
+    // If that case, fall-back to the previous methodology.
+    // See the implementation in publisher_base.cpp
+    if(non_local_sub_count < 0) {
+      inter_process_publish_needed =
+        (get_subscription_count() > get_intra_process_subscription_count());
+    }
 
     if (inter_process_publish_needed) {
       auto ros_msg_ptr = std::make_shared<ROSMessageType>();
