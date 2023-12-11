@@ -273,7 +273,7 @@ public:
     // It's not possible to do that with an unique_ptr,
     // as do_intra_process_publish takes the ownership of the message.
 
-    int non_local_sub_count = get_non_local_subscription_count();
+    size_t non_local_sub_count = get_non_local_subscription_count();
     bool inter_process_publish_needed = non_local_sub_count > 0;
     // The non-local-subscription-count will temporarily be -1 on cyclone dds
     // until it can be fully implemented there.
@@ -359,7 +359,7 @@ public:
       return this->do_inter_process_publish(ros_msg);
     }
 
-    int non_local_sub_count = get_non_local_subscription_count();
+    size_t non_local_sub_count = get_non_local_subscription_count();
     bool inter_process_publish_needed = non_local_sub_count > 0;
     // The non-local-subscription-count will temporarily be -1 on cyclone dds
     // until it can be fully implemented there.
